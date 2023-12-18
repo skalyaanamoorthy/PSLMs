@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/732843053.svg)](https://zenodo.org/doi/10.5281/zenodo.10403302)
+
 # Protein Sequence Likelihood Modelling for Thermostability Prediction
 
 This repository is for facilitating access to and benchmarking self-supervised deep learning models, which predict the likelihood of amino acids in their biochemical context, in order to make zero-shot predictions of thermostability measurements.
