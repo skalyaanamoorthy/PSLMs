@@ -14,6 +14,7 @@ This repository is for facilitating access to and benchmarking self-supervised d
   * tested on A100, RTX 3090
 * NVIDIA CUDA (tested v11) and CUDNN (if running inference)
 * HMMER (if generating MSAs)
+* Git LFS (if examining or analyzing reported data, including using Notebooks)
 
 # Demo /  Instructions
 
@@ -39,11 +40,17 @@ We provide the processed predictions for FireProtDB and S461 in `./data/fireprot
 
 Clone the repository:
 
-`git clone https://github.com/skalyaanamoorthy/ThermoTL.git`
+`git clone https://github.com/skalyaanamoorthy/PSLMs.git`
 
-`cd ThermoTL`
+`cd PSLMs`
 
-If you do not have root permissions (ability to sudo) you should use conda, as it will make future steps faster and easier. Otherwise you can use VirtualEnv.
+If you want to also download all associated data, you may need to obtain GitLFS. Then:
+
+ `git lfs install`
+
+ `git lfs pull`
+
+Next, you need to create the environment. **If you do not have root permissions (ability to sudo) you should use conda, as it will make future steps faster and easier. Otherwise you can use VirtualEnv**.
 
 To install with conda, you might need to `module load anaconda` and/or `module load python` first:
 
