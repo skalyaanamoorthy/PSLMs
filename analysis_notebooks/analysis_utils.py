@@ -126,6 +126,7 @@ def determine_category(model):
             return category
 
 def determine_base_color(model):
+    print(model)
     return custom_colors[determine_category(model)]
 
 def generate_palette(base_color):
@@ -1896,16 +1897,16 @@ def get_stat_df(df, statistic, new_dir, preds=None):
                         else:
                             runtime_gpu += preds['runtime_'+model2+new_dir].sum()
 
-                combinations['runtime_cpu'].append(runtime_cpu)
-                combinations['runtime_gpu'].append(runtime_gpu)
-                combinations['runtime_cpu'].append(runtime_cpu)
-                combinations['runtime_gpu'].append(runtime_gpu)
+                    combinations['runtime_cpu'].append(runtime_cpu)
+                    combinations['runtime_gpu'].append(runtime_gpu)
+                    combinations['runtime_cpu'].append(runtime_cpu)
+                    combinations['runtime_gpu'].append(runtime_gpu)
 
-                combinations['model1'].append(stat_row['model2'].item())
-                combinations['weight1'].append(stat_row['weight2'].item())
-                combinations['model2'].append(stat_row['model1'].item())
-                combinations['weight2'].append(stat_row['weight1'].item())
-                combinations[statistic].append(stat_row[statistic].item())
+                    combinations['model1'].append(stat_row['model2'].item())
+                    combinations['weight1'].append(stat_row['weight2'].item())
+                    combinations['model2'].append(stat_row['model1'].item())
+                    combinations['weight2'].append(stat_row['weight1'].item())
+                    combinations[statistic].append(stat_row[statistic].item())
 
     # Create a new DataFrame with the calculated statistics
     #print(combinations)
