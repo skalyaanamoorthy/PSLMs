@@ -44,7 +44,7 @@ def main(args):
     WINDOWS_DIR = os.path.join(output_path, 'windows')
     # this defines where results from Rosetta will be stored, for organization
     RESULTS_DIR = os.path.join(output_path, 'results')
-    DATA_DIR = os.path.join(output_path, 'data')
+    DATA_DIR = os.path.join(output_path, 'data', 'preprocessed')
 
     # first build a folder structure for organizing inputs and outputs.
     for folder in [BIO_ASSEMBLIES_DIR, STRUCTURES_DIR, ALIGNMENTS_DIR, 
@@ -367,6 +367,35 @@ def main(args):
     out.to_csv(os.path.join(
         output_path, DATA_DIR, f'{dataset_outname}_mapped.csv'))
 
+    if dataset_outname == 's669':
+
+        db = out
+        db['uid2'] = db['code'] + '_' + \
+            db['position'].astype(int).astype(str) + db['mutation'].str[-1]
+        db = db.reset_index().set_index(['uid', 'uid2'])
+
+        # create and use a third index for matching with the S461 subset
+        db_full = db.copy(deep=True)
+        db_full['uid3'] = db['code'] + '_' + db['PDB_Mut'].str[1:]
+        db_full = db_full.reset_index().set_index('uid3')
+
+        # preprocess S461 to align with S669
+        s461 = pd.read_csv(os.path.join
+            (output_path, 'data', 'external_datasets','S461.csv'))
+        s461['uid3'] = s461['PDB'] + '_' + s461['MUT_D'].str[2:]
+        s461 = s461.set_index('uid3')
+        s461['ddG_I'] = -s461['ddG_D']
+        s461.columns = [s+'_dir' for s in s461.columns]
+        s461 = s461.rename(
+            {'ddG_D_dir': 'ddG_dir', 'ddG_I_dir': 'ddG_inv'}, axis=1)
+
+        # merge S669 with S461 
+        # (keeping predictions from both for comparison purposes)
+        db = s461.join(db_full, how='left').reset_index(
+            drop=True).set_index(['uid', 'uid2'])
+
+        db.to_csv(os.path.join(output_path, DATA_DIR, 's461_mapped.csv'))
+
     grouped = out.reset_index(drop=True).reset_index()
     missing_indices = grouped.loc[grouped['code'].isin(missing_msas)].groupby(
         ['code', 'chain']).first()['index'].astype(str)
@@ -389,7 +418,7 @@ if __name__=='__main__':
                         'downstream prediction')
     parser.add_argument('--dataset', help='name of database (s669/fireprot),'
                         'assuming you are in the root of the repository',
-                      default='fireprot')
+                      default='q3421')
     parser.add_argument('--db_loc', help='location of database,'
                         'only specify if you are using a custom DB',
                        default=None)
@@ -414,11 +443,15 @@ if __name__=='__main__':
                         +'parsed')
 
     args = parser.parse_args()
-    if args.dataset.lower() in ['fireprot', 'fireprotdb']:
-        args.db_loc = './data/fireprotdb_results.csv'
+    if args.dataset.lower() in ['q3421']:
+        args.db_loc = './data/external_datasets/Q3421.csv'
+    elif args.dataset.lower() in ['fireprot', 'fireprotdb']:
+        args.db_loc = './data/external_datasets/fireprotdb_results.csv'
     elif args.dataset.lower() in ['s669', 's461']:
-        args.db_loc = './data/Data_s669_with_predictions.csv'
-        args.inverse = True
+        args.db_loc = './data/external_datasets/Data_s669_with_predictions.csv'
+        args.dataset = 's669'
+    elif args.dataset.lower() in ['ssym']:
+        args.db_loc = './data/external_datasets/ssym.csv'
     else:
         print('Inferred use of user-created database. Note: this must '
               'contain columns for code, wild_type, position, mutation. '

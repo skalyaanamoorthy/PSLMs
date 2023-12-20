@@ -83,6 +83,8 @@ remap_names = {
     'delta_vol': 'Δ volume', 
     'delta_chg': 'Δ charge',
     'rel_ASA': 'relative ASA',
+    'q3421_pslm_rfa_2': 'Ensemble 2 Feats',
+    'q3421_pslm_rfa_3': 'Ensemble 3 Feats',
     'q3421_pslm_rfa_4': 'Ensemble 4 Feats',
     'q3421_pslm_rfa_5': 'Ensemble 5 Feats',
     'random': 'Gaussian Noise',
@@ -101,8 +103,8 @@ untrained = ['DDGun']
 transfer = ['stability-oracle', 'ACDC']
 potential = ['KORPM', 'PopMusic', 'SDM', 'korpm', 'PoPMuSiC']
 biophysical = ['cartesian_ddg', 'FoldX', 'Evo', 'CartDDG']
-ensemble = ['ens', 'mpnn_rosetta', 'rfa', ' + ']
-unknown = ['ddG', 'dTm', 'random', 'Dynamut'] + ['delta', 'ASA']
+ensemble = ['ens', 'mpnn_rosetta', 'rfa', ' + ', 'Dynamut']
+unknown = ['ddG', 'dTm', 'random'] + ['delta', 'ASA']
 
 categories = ['structural', 'evolutionary', 'transfer', 'biophysical', 'potential', 'untrained', 'supervised', 'unknown', 'unused', 'ensemble']
 colors = list(sns.color_palette())[:len(categories)]
@@ -126,7 +128,6 @@ def determine_category(model):
             return category
 
 def determine_base_color(model):
-    print(model)
     return custom_colors[determine_category(model)]
 
 def generate_palette(base_color):
