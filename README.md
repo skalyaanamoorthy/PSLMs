@@ -2,7 +2,7 @@
 
 # Protein Sequence Likelihood Modelling for Thermostability Prediction
 
-This repository is for facilitating access to and benchmarking self-supervised deep learning models, which predict the likelihood of amino acids in their biochemical context, in order to make zero-shot predictions of thermostability measurements.
+This repository is for facilitating access to and benchmarking self-supervised deep learning models, which predict the likelihood of amino acids in their biochemical context, in order to make zero-shot predictions of thermostability measurements. We refer to these models as **Protein Sequence Likelihood Models**.
 
 # System Requirements
 
@@ -22,11 +22,11 @@ This repository is for facilitating access to and benchmarking self-supervised d
 
 You can use the Jupyter notebooks from the analysis_notebooks folder to reproduce the figures, **modifying the path at the start of the file** and running each cell sequentially. 
 
-The notebooks draw from precomputed features, the original databases from their respective authors, and predictions generated on a high-performance compute cluster (also tested on a flagship consumer GPU). All of these data sources are included in the repository, and instructions for reproducing the predictions and features are provided below. 
+The notebooks draw from precomputed features, the original databases from their respective authors, and predictions generated on a high-performance compute cluster (also tested on RTX 3090). All of these data sources are included in the repository, and instructions for reproducing the predictions and features are provided below. 
 
 The expected outputs are shown below the cells. The expected runtimes are often included per-cell, for a total runtime of <60 minutes on a typical PC (or <5 minutes for the S461 analysis). To reduce the demo time, the number of bootstrapped replicates have been greatly reduced from those reported in the text. Additionally, the ensemble predictions step has been precomputed and is loaded from a file, but can be easily reproduced by uncommenting the relevant line(s).
 
-We recommend demoing the more thoroughly documented and tidy fireprot_analysis.ipynb .
+We recommend demoing the more thoroughly documented and tidy analysis_notebooks/Q3421_analysis.ipynb .
 
 # Installation Guide
 
@@ -38,7 +38,7 @@ The sections after general setup are for reproducing the experiments starting fr
 
 ## General Setup
 
-We provide the processed predictions for FireProtDB and S461 in `./data/fireprot_mapped_preds_original.csv` and `./data/s461_mapped_preds_original.csv`, respectively. However, to reproduce the predictions you can follow the below sections for preprocessing and inference. We also provide the pre-extracted features for analysis in the corresponding `./data/{dataset}_mapped_feats.csv` files, but you can reproduce those according to the feature analysis section.
+We provide the processed predictions for Q3421, FireProtDB, Ssym and S461 in `./data/inference/{dataset}_mapped_preds.csv`. However, to reproduce the predictions you can follow the below sections for preprocessing and inference. We also provide the pre-extracted features for analysis in the corresponding `./data/features/{dataset}_mapped_feats.csv` files, but you can reproduce those according to the feature analysis section.
 
 Clone the repository:
 
@@ -155,39 +155,35 @@ To make modeller visible to the Python scripts from within the VirtualEnv, you c
 
 `source pslm/bin/activate`
 
-To run inference on either FireProtDB or S669/S461 you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py. Assuming you are in the base level of the repo, you can call the following (this will use the raw FireProtDB obtained from https://loschmidt.chemi.muni.cz/fireprotdb/ Browse Database tab).:
+To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py. Assuming you are in the base level of the repo, you can call the following:
 
-`python preprocessing/preprocess.py --dataset fireprotdb`
+`python preprocessing/preprocess.py --dataset q3421`
 
-Add the --internal_path argument to specify a different location for the repository where the calculations will be run, for instance if preprocessing locally and then running inference on the cluster
+Add the --internal_path argument to specify a different repo location to look for inputs/outputs for the repository where the calculations will be run, for instance if preprocessing locally and then running inference on the cluster
 
-Note that the output dataframe `./data/fireprot_mapped.csv` is already generated, but the other files are not prepared.
+Note that the output dataframe `./data/preprocessed/q3421_mapped.csv` is already generated, but the other files are not prepared.
 
-It is expected to see the message '507 observations lost from the original dataset' for FireProtDB. Note that you will also have to do this for S669. S461 is a subset of S669, so you can call either dataset for the `--dataset` argument, and the same preprocessing will occur; the subset will be generated in the analysis notebook. For inverse/reversion mutations on S669/S461, you will use the predicted mutant structures in the structures_mut folder, which we obtained from the authors (thank you, Drs. Birolo and Fariselli): https://academic.oup.com/bib/article/23/2/bbab555/6502552. They will have to be preprocessed as well; add the --inverse flag if you need to get information to run Rosetta. We also obtained the original data file Data_s669_with_predictions.csv from the Supplementary information of this paper, adjusting one record to accurately reflect the structure. Citation: Pancotti, C. et al. Predicting protein stability changes upon single-point mutation: a thorough comparison of the available tools on a new dataset. Briefings in Bioinformatics 23, bbab555 (2022).
+It is expected to see the message '507 observations lost from the original dataset' for FireProtDB, but no observations should be lost for the other datasets. Note that you will also have to do this for S669. S461 is a subset of S669, so you can call either dataset for the `--dataset` argument, and the same preprocessing will occur; the subset will be generated in the analysis notebook. 
 
-`python preprocessing/preprocess.py --dataset s669`
-
-You can also use a custom database for inference. The preprocessing script will facilitate making predictions (and MSAs) with all methods by collecting the corresponding UniProt sequence (if available) as well as modelling, preprocessing, and validating all structures as required. To use this functionality, you can create a csv file with columns for code (PDB ID) chain (chain in PDB structure), wild_type (one letter code for wild-type identity at mutated position), position (corresponds to the **index in the PDB sequence (not PDB coordinates)**, and mutation (one-letter code), with as many rows as desired. Then run preprocessing pointing to the database and giving it a desired name which will appear in the prefix:
+You can also use a custom database for inference. The preprocessing script will facilitate making predictions (and MSAs) with all methods by collecting the corresponding UniProt sequence (if available) as well as modelling, preprocessing, and validating all structures as required. To use this functionality, you can create a csv file with columns for code (PDB ID) chain (chain in PDB structure), wild_type (one letter code for wild-type identity at mutated position), position (corresponds to the PDB-designated index), and mutation (one-letter code), with as many rows as desired. Then run preprocessing pointing to the database and giving it a desired name which will appear in the prefix:
 
 `python preprocessing/preprocess.py --dataset MY_CUSTOM_NAME --db_loc ./data/my_custom_dataset.csv`
 
-If you are not sure of how your numbering aligns with the PDB sequence numbering, you can try to use the --infer_pos flag.
-
 ## Running Inference
 
-**Note: you MUST run the preprocessing scripts to generate the correct file mappings for your system. If you run into problems with missing files when running inference, this is probably why.**
+**Note: you MUST run the preprocessing scripts to generate the correct file mappings for your system. If you run into problems with missing files when running inference, this is probably why. You also need to install requirements_inference.txt**
 
-Then, you can run any of the inference scripts in inference scripts. You can use the template calls from cluster_inference_scripts in order to determine the template for calling each method's wrapper script (they are designed to be called from the cluster_inference_scripts directory, though). On the other hand, to run ProteinMPNN **from the repository root** with 0.2 Angstrom backbone noise on FireProtDB:
+Then, you can run any of the inference scripts in inference_scripts. You can use the template calls from cluster_inference_scripts in order to determine the template for calling each method's wrapper script (they are designed to be called from the cluster_inference_scripts directory, though). On the other hand, to run ProteinMPNN **from the repository root** with 0.2 Angstrom backbone noise on Q3421, first generate a copy of the mapped mutations to store predictions (optional), then run the inference script:
 
-`cp data/fireprot_mapped.csv data/fireprot_mapped_preds.csv`
+`cp data/preprocessed/q3421_mapped.csv data/inference/q3421_mapped_preds_copy.csv`
 
-`python inference_scripts/mpnn.py --db_location 'data/fireprot_mapped.csv' --output 'data/fireprot_mapped_preds.csv' --mpnn_loc ~/software/ProteinMPNN --noise '20'`
+`python inference_scripts/mpnn.py --db_location 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds_copy.csv' --mpnn_loc ~/software/ProteinMPNN --noise '20'`
 
 **Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
 
-If you are running on a cluster, you will likely find it convenient to modify the `cluster_inference_scripts` and directly submit them; they are designed to be submitted from their own folder as the working directory, rather than the root of the repo like all other files. Note that ESM methods (ESM-1V, MSA-Transformer, ESM-IF) and MIF methods (MIF and MIF-ST) will require substantial storage space and network usage to download the model weights on their first run (especially ESM-1V). To run inference of inverse/reversion mutations for structural methods you will need the predicted mutants as stated above, and you will have to use the _inv versions of each structural method.
+If you are running on a cluster, you will likely find it convenient to modify the `cluster_inference_scripts` and directly submit them; they are designed to be submitted from their own folder as the working directory, rather than the root of the repo like all other files. Note that each method will require substantial storage space and network usage to download the model weights on their first run (especially ESM-1V).
 
-Note that ProteinMPNN and Tranception require the location where the github repository was installed as arguments.
+Note that ProteinMPNN and Tranception require the location where the GitHub repository was installed as arguments.
 
 ## Feature Analysis Setup
 
