@@ -76,7 +76,7 @@ remap_names = {
     'evolutionary': 'Evolutionary',
     'supervised': 'Supervised',
     'clustered_ensemble': 'Clustered Ensemble',
-    'mpnn_rosetta': 'ProteinMPNN 0.2 + Rosetta CartDDG',
+    'mpnn_rosetta': 'Rosetta/ProtMPNN',
     'mutcomputex': 'MutComputeX',
     'stability-oracle': 'Stability Oracle',
     'delta_kdh': 'Δ hydrophobicity', 
@@ -570,7 +570,7 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
             if len(measurements) > 1:
                 ax_list[i].set_xlabel('')
             else:
-                ax_list[i].set_xlabel('top x% of ranked scores')
+                ax_list[i].set_xlabel('top x% of ranked predictions')
             #axes[0, 1].set_ylabel('fraction of top mutants identified')
             ax_list[i].set_ylabel('fraction stabilizing (ΔΔG > 1 kcal/mol)')
             #ax_list[i].set_title('ΔΔG')
@@ -594,7 +594,7 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
                 color = cmap[model]
                 sns.lineplot(data=subset, x='variable', y='value', ax=ax_list[i], label=model, color=color)
             #ax_ = sns.lineplot(data=recov, x='variable', y='value', hue='model', ax=ax_list[i])
-            ax_list[i].set_xlabel('top x% of ranked scores')
+            ax_list[i].set_xlabel('top x% of ranked predictions')
             ax_list[i].set_ylabel('mean stabilizition (kcal/mol)')
             annotate_points(ax_list[i], recov, 'variable', 'value', 'model', [10], text_offset=(-20, -0.17), spacing=spacing*3)
             i += 1
@@ -629,7 +629,7 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
             recov = recov.melt(id_vars='model')
             recov['variable'] = recov['variable'].str.strip('$y').astype(float)
             sns.lineplot(data=recov, x='variable', y='value', hue='model', ax=ax_list[i])
-            ax_list[i].set_xlabel('top x% of ranked scores')
+            ax_list[i].set_xlabel('top x% of ranked predictions')
             #axes[1, 1].set_ylabel('fraction of stablizing mutants recovered')
             ax_list[i].set_ylabel('mean stabilizition (deg. K)')
             annotate_points(ax_list[i], recov, 'variable', 'value', 'model', [10], text_offset=(-20, -0.17), spacing=spacing*12)
