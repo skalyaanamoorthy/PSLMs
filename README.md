@@ -10,7 +10,7 @@ This repository is for facilitating access to and benchmarking self-supervised d
   * tested on GNU/Linux 3.10.0-1160.71.1.el7.x86_64, 4.18.0-477.21.1.el8_8.x86_64
   * tested on WSL2
   * tested on Fedora 38 (cannot use apt here of course)
-* Anaconda / Python 3.8
+* Anaconda / Python 3.9 (tested)
   * dependencies included in requirements.txt (additionally requirements_inference.txt for running inference)
 * NVIDIA GPU (if running inference)
   * tested on A100, RTX 3090
