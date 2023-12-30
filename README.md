@@ -187,7 +187,7 @@ Then, you can run any of the inference scripts in inference_scripts. You can use
 
 `python inference_scripts/mpnn.py --db_location 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds_copy.csv' --mpnn_loc ~/software/ProteinMPNN --noise '20'`
 
-**Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
+**NOTE: Due to the use of relative paths in the _mapped.csv, you must call inference scripts from the root of the repository! Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
 
 If you are running on a cluster, you will likely find it convenient to modify the `cluster_inference_scripts` and directly submit them; they are designed to be submitted from their own folder as the working directory, rather than the root of the repo like all other files. Note that each method will require substantial storage space and network usage to download the model weights on their first run (especially ESM-1V).
 
