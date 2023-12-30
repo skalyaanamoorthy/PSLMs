@@ -98,9 +98,15 @@ Start by installing CUDA if you have not already: https://docs.nvidia.com/cuda/c
 
 Then install Pytorch according to the instructions: https://pytorch.org/get-started/locally/ . In some cases, it will suffice to `pip install torch`, but you must take care to match your CUDA version. On the ComputeCanada cluster, there may be dependency issues between the numpy and torch versions. In this case, since Modeller cannot be installed anyway, we suggest that preprocessing be performed locally, followed by only installing the requirements_inference on the cluster environment.
 
-Finally, you can install the inference-specific requirements:
+Finally, you can install the inference-specific requirements (approx 2 minutes total on a GPU):
 
 `pip install -r requirements_inference.txt --no-deps`
+
+You can quickly demo inference using MIF (fastest to download the model and run inference):
+
+`python ./inference_scripts/mif.py  --db_loc './data/preprocessed/q3421_mapped.csv' --output './data/inference/q3421_mapped_preds.csv'`
+
+Note that the predictions in ./data/inference/q3421_mapped_preds.csv will be overwritten, but should be identical.
 
 You will also need to install the following inference repositories if you wish to use these specific models:
 
