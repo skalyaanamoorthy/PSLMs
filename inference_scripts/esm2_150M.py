@@ -15,34 +15,41 @@ def score_sequences(args):
     df2 = df.groupby('uid').first()
     dataset = args.dataset
 
-    logps = pd.DataFrame(index=df2.index, columns=['esm2_dir', 'runtime_esm2_dir'])
+    logps = pd.DataFrame(index=df2.index, columns=['esm2_150M_dir', 'runtime_esm2_150M_dir'])
 
     # Replace esm's load function with Hugging Face's
     # The tokenizer is included in case you need it later for tokenization
     #tokenizer = AutoTokenizer.from_pretrained('esm2_t48_15B_UR50D')
     #model = AutoModel.from_pretrained('esm2_t48_15B_UR50D')
-    model, alphabet = pretrained.load_model_and_alphabet(f'esm2_t48_15B_UR50D')
+    model, alphabet = pretrained.load_model_and_alphabet(f'esm2_t30_150M_UR50D')
 
     model.eval()
-    with autocast():
-        if torch.cuda.is_available():
+    if torch.cuda.is_available():
         # Use DataParallel for multi-GPU. Assuming you have 2 GPUs with ids: 0 and 1.
         #model = torch.nn.DataParallel(model, device_ids=[0, 1])
-            model = model.half().cuda()
-            print("Transferred model to GPUs")
+        model = model.cuda()
+        print("Transferred model to GPUs")
 
     with tqdm(total=len(df2)) as pbar:
         for code, group in df2.groupby('code'):
             for uid, row in group.iterrows():
                 with torch.no_grad():
-                    try:
+                    if True:
+                    #try:
                         pos = row['position']
                         wt = row['wild_type']
                         mt = row['mutation']
                         ou = row['offset_up']
                         ws = row['window_start']
-                        sequence = row['uniprot_seq'][ws:ws+1022]
-                        oc = int(ou) * (0 if dataset == 'fireprot' else -1)  -1 -ws
+                        sequence = row['uniprot_seq']
+                        if dataset == 'fireprot':
+                            pos = row['position_orig']
+                            oc = -1
+                        else:
+                            oc = -ou -1
+                        if code == '1TIT':
+                            sequence = row['uniprot_seq'][ws:ws+1023]
+                            oc -= ws
                         idx = pos + oc
 
                         start = time.time()
@@ -56,31 +63,33 @@ def score_sequences(args):
                         batch_tokens_masked = batch_tokens.clone()
                         batch_tokens_masked[0, idx + 1] = alphabet.mask_idx
                         with torch.no_grad():
-                            with autocast():
-                                token_probs = torch.log_softmax(
-                                    model(batch_tokens_masked.cuda())["logits"], dim=-1
-                                )
+                            token_probs = torch.log_softmax(
+                                model(batch_tokens_masked.cuda())["logits"], dim=-1
+                            )
                         #print(token_probs.shape)
-                        assert sequence[idx] == wt
+                        try:
+                            assert sequence[idx] == wt
+                        except:
+                            print('Warning: input sequence does not match designated wild-type. ', code, wt, pos, mt)
 
                         wt_encoded, mt_encoded = alphabet.get_idx(wt), alphabet.get_idx(mt)
                         score = token_probs[0, 1 + idx, mt_encoded] - token_probs[0, 1 + idx, wt_encoded]
 
-                        logps.at[uid, f'esm2_dir'] = score.item()
-                        logps.at[uid, f'runtime_esm2_dir'] = time.time() - start
-                    except:
-                        print(code, wt, pos, mt)
-                        logps.at[uid, f'esm2_dir'] = np.nan
-                        logps.at[uid, f'runtime_esm2_dir'] = np.nan
+                        logps.at[uid, f'esm2_150M_dir'] = score.item()
+                        logps.at[uid, f'runtime_esm2_150M_dir'] = time.time() - start
+                    #except:
+                    #    print('failed: ', code, wt, pos, mt)
+                    #    logps.at[uid, f'esm2_dir'] = np.nan
+                    #    logps.at[uid, f'runtime_esm2_dir'] = np.nan
                     pbar.update(1)
     
     df = pd.read_csv(args.output, index_col=0)
     logps.index.name = 'uid'
     df = pd.read_csv(args.output, index_col=0)
-    if f'esm2_dir' in df.columns:
-        df = df.drop(f'esm2_dir', axis=1)
-    if f'runtime_esm2_dir' in df.columns:
-        df = df.drop(f'runtime_esm2_dir', axis=1)
+    if f'esm2_150M_dir' in df.columns:
+        df = df.drop(f'esm2_150M_dir', axis=1)
+    if f'runtime_esm2_150M_dir' in df.columns:
+        df = df.drop(f'runtime_esm2_150M_dir', axis=1)
     df = df.join(logps)
     df.to_csv(args.output)
 
