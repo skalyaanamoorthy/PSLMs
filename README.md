@@ -159,7 +159,11 @@ To make modeller visible to the Python scripts from within the VirtualEnv, you c
 
 `source pslm/bin/activate`
 
-To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py. Assuming you are in the base level of the repo, you can call the following:
+To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py. 
+
+**If you intend to use the preprocessed predictions for inference or computing features you MUST unzip the msas! (data/msas.zip)
+
+Assuming you are in the base level of the repo, you can call the following:
 
 `python preprocessing/preprocess.py --dataset q3421`
 
@@ -191,7 +195,7 @@ Note that ProteinMPNN and Tranception require the location where the GitHub repo
 
 ## Feature Analysis Setup
 
-For analysis based on features, you can compute the features using preprocessing/compute_features.py. Note that the features have been precomputed and appear in `./data/fireprot_mapped_feats.csv`:
+For analysis based on features, you can compute the features using preprocessing/compute_features.py. Note that the features have been precomputed and appear in `./data/features/{dataset}_mapped_feats.csv`:
 You will need the following tools to help recompute features:
 
 AliStat (for getting multiple sequence alignment statistics): https://github.com/thomaskf/AliStat
