@@ -78,7 +78,7 @@ Make a new virual environment instead (tested with Python=3.8). On a cluster, yo
 
 On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dependencies and load the arrow module instead with `module load arrow`. You will also have to use the --no-deps flag.
 
-You can then install the pip requirements:
+You can then install the pip requirements (if only performing inference (not preprocessing and analysis), you can skip):
 
 `pip install -r requirements.txt`
 
@@ -101,6 +101,10 @@ Then install Pytorch according to the instructions: https://pytorch.org/get-star
 Finally, you can install the inference-specific requirements (approx 2 minutes total on a GPU):
 
 `pip install -r requirements_inference.txt --no-deps`
+
+Install evcouplings separately if you haven't already:
+
+`pip install evcouplings --no-deps`
 
 You can quickly demo inference using MIF (fastest to download the model and run inference):
 
