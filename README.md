@@ -58,7 +58,7 @@ Next, you need to create the environment. **If you do not have root permissions 
 
 To install with conda, you might need to `module load anaconda` and/or `module load python` first:
 
-`conda create --name pslm python=3.8`
+`conda create --name pslm python=3.9`
 
 `conda activate pslm`
 
@@ -68,7 +68,7 @@ To be able to run the notebooks:
 
 **If you don't have conda and/or don't have root permissions:**
 
-Make a new virual environment instead (tested with Python=3.8). On a cluster, you might need to `module load python` first:
+Make a new virual environment instead (tested with Python=3.9). On a cluster, you might need to `module load python` first:
 
 `virtualenv pslm`
 
