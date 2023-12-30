@@ -5,14 +5,18 @@ charset-normalizer
 certifi
 click
 datasets==1.18.3
+dateutil
+dill
 filelock
 flax==0.4.0
+fsspec
 git+https://github.com/facebookresearch/esm.git@2b369911bb5b4b0dda914521b9475cad1656b2ac
 huggingface-hub
 idna
 jax==0.3.0
 joblib
 mpmath
+multidict
 multiprocess
 numpy
 optax
@@ -22,6 +26,7 @@ pyaml
 python-dateutil
 pytorch-triton
 pytz
+PyYAML
 regex
 sacremoses
 sentencepiece==0.1.96
@@ -39,5 +44,5 @@ tqdm
 transformers==4.17
 typing-extensions
 tzdata
-urllib
+urllib3
 wandb==0.12.11
