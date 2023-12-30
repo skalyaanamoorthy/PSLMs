@@ -52,6 +52,8 @@ If you want to also download all associated data, you may need to obtain GitLFS.
 
  `git lfs pull`
 
+You do not need to extract the zip files in data to run the notebooks. However, you will need to extract the msas.zip to compute features, if desired. Precomputed features are included in the data folder.
+
 Next, you need to create the environment. **If you do not have root permissions (ability to sudo) you should use conda, as it will make future steps faster and easier. Otherwise you can use VirtualEnv**.
 
 To install with conda, you might need to `module load anaconda` and/or `module load python` first:
@@ -83,6 +85,8 @@ You can install the pip requirements:
 Finally, install evcouplings with no dependencies (it is an old package which will create conflicts):
 
 `pip install evcouplings --no-deps`
+
+**You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
 
 ## Inference Setup
 
@@ -119,7 +123,7 @@ Make sure to have Git LFS in order to obtain the potential maps used by KORPM, o
 
 `git clone https://github.com/chaconlab/korpm`
 
-You will need to compile korpm with the gcc compiler:
+You will need to compile KORPM with the GCC compiler:
 
 `cd korpm/sbg`
 
