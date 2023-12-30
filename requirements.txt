@@ -38,7 +38,7 @@ mpmath
 msgpack
 multidict
 nest-asyncio
-networkx
+networkx==2.6
 numba
 numpy==1.23
 packaging
