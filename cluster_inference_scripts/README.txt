@@ -1,0 +1,1 @@
+Note: these scripts are only given as examples! You will likely have to uncomment, change directories, etc.!
