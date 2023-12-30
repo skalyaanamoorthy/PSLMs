@@ -37,14 +37,9 @@ def score_sequences(args):
                         ou = row['offset_up']
                         ws = row['window_start']
                         sequence = row['uniprot_seq']#[ws:ws+1022]
-                        if dataset == 'fireprot':
-                            pos = row['position_orig']
-                            oc = -1
-                        else:
-                            oc = -ou -1
                         if code == '1TIT':
-                            sequence = row['uniprot_seq'][ws:ws+1023]
-                            oc -= ws
+                            sequence = row['uniprot_seq'][ws:ws+1022]
+                        oc = int(ou) * (0 if dataset == 'fireprot' else -1)  -1 #-ws
                         idx = pos + oc
 
                         sequence = list(sequence)
