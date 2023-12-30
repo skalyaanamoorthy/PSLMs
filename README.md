@@ -20,13 +20,11 @@ This repository is for facilitating access to and benchmarking self-supervised d
 
 # Demo /  Instructions
 
-You can use the Jupyter notebooks from the analysis_notebooks folder to reproduce the figures, **modifying the path at the start of the file** and running each cell sequentially. 
+You can use the Jupyter notebooks from the analysis_notebooks folder to reproduce the figures, **modifying the path at the start of the file if needed** and running each cell sequentially. 
 
 The notebooks draw from precomputed features, the original databases from their respective authors, and predictions generated on a high-performance compute cluster (also tested on RTX 3090). All of these data sources are included in the repository, and instructions for reproducing the predictions and features are provided below. 
 
-The expected outputs are shown below the cells. The expected runtimes are often included per-cell, for a total runtime of <60 minutes on a typical PC (or <5 minutes for the S461 analysis). To reduce the demo time, the number of bootstrapped replicates have been greatly reduced from those reported in the text. Additionally, the ensemble predictions step has been precomputed and is loaded from a file, but can be easily reproduced by uncommenting the relevant line(s).
-
-We recommend demoing the more thoroughly documented and tidy analysis_notebooks/Q3421_analysis.ipynb .
+We recommend demoing the more thoroughly documented and tidy analysis_notebooks/Q3421_analysis.ipynb . The expected outputs are shown below the cells. The expected runtimes are often included per-cell, for a total runtime of <5 minutes on a typical PC. To reduce the demo time, the number of bootstrapped replicates have been greatly reduced from those reported in the text. Additionally, the ensemble predictions step has been precomputed and is loaded from a file, but can be easily reproduced by uncommenting the relevant line(s).
 
 # Installation Guide
 
