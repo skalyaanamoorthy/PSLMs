@@ -141,6 +141,8 @@ You will need to compile KORPM with the GCC compiler:
 
 Like the above methods, there is a wrapper script in inference_scripts where you will need to specify the installation directory with the argument --korpm_loc.
 
+For MSA Transformer, you need to generate subsampled alignments with using inference_scripts/subsample_one.py (according to the template given in cluster inference scripts).
+
 ## Preprocessing
 
 **Note: you can skip this step to demo results. This is for reproducing predictions.**
