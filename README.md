@@ -14,6 +14,8 @@ This repository is for facilitating access to and benchmarking self-supervised d
   * dependencies included in requirements.txt (additionally requirements_inference.txt for running inference)
 * NVIDIA GPU (if running inference)
   * tested on A100, RTX 3090
+* High RAM
+  * up to 128GB for preprocessing or inference involving MSAs
 * NVIDIA CUDA (tested v11) and CUDNN (if running inference)
 * HMMER (if generating MSAs)
 * Git LFS (if examining or analyzing reported data, including using Notebooks)
