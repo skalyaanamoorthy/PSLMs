@@ -179,7 +179,7 @@ You can also use a custom database for inference. The preprocessing script will 
 
 ## Running Inference
 
-**Note: you MUST run the preprocessing scripts to generate the correct file mappings for your system. If you run into problems with missing files when running inference, this is probably why. You also need to install requirements_inference.txt**
+**Note: you MUST run the preprocessing scripts to generate the correct file mappings for your system, or else always run inference from the root of the repo. If you run into problems with missing files when running inference, this is probably why. You also need to install requirements_inference.txt**
 
 Then, you can run any of the inference scripts in inference_scripts. You can use the template calls from cluster_inference_scripts in order to determine the template for calling each method's wrapper script (they are designed to be called from the cluster_inference_scripts directory, though). On the other hand, to run ProteinMPNN **from the repository root** with 0.2 Angstrom backbone noise on Q3421, first generate a copy of the mapped mutations to store predictions (optional), then run the inference script:
 
