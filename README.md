@@ -10,7 +10,7 @@ This repository is for facilitating access to and benchmarking self-supervised d
   * tested on GNU/Linux 3.10.0-1160.71.1.el7.x86_64, 4.18.0-477.21.1.el8_8.x86_64
   * tested on WSL2
   * tested on Fedora 38 (cannot use apt here of course)
-* Anaconda / Python 3.9 (tested)
+* Anaconda / Python 3.8 (tested)
   * dependencies included in requirements.txt (additionally requirements_inference.txt for running inference)
 * NVIDIA GPU (if running inference)
   * tested on A100, RTX 3090
@@ -58,7 +58,7 @@ Next, you need to create the environment. **If you do not have root permissions 
 
 To install with conda, you might need to `module load anaconda` and/or `module load python` first:
 
-`conda create --name pslm python=3.9`
+`conda create --name pslm python=3.8`
 
 `conda activate pslm`
 
@@ -68,7 +68,7 @@ To be able to run the notebooks:
 
 **If you don't have conda and/or don't have root permissions:**
 
-Make a new virual environment instead (tested with Python=3.9). On a cluster, you might need to `module load python` first:
+Make a new virual environment instead (tested with Python=3.8). On a cluster, you might need to `module load python` first:
 
 `virtualenv pslm`
 
