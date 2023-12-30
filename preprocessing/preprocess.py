@@ -427,7 +427,7 @@ if __name__=='__main__':
                         default='.')
     parser.add_argument('-i', '--internal_path', 
                         help='modified path to outputs at inference computer',
-                        default=None)
+                        default='.')
     parser.add_argument('-a', '--alignments',
                         help='folder where redundancy-reduced alignments are',
                         default='./data/msas')
