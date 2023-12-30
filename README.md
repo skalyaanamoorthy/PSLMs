@@ -74,11 +74,11 @@ Make a new virual environment instead (tested with Python=3.8). On a cluster, yo
 
 `source pslm/bin/activate`
 
-On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dependencies and load the arrow module instead with `module load arrow`. You will also have to use the --no-deps flag.
-
 **After setting up either a virtualenv OR conda environment**:
 
-You can install the pip requirements:
+On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dependencies and load the arrow module instead with `module load arrow`. You will also have to use the --no-deps flag.
+
+You can then install the pip requirements:
 
 `pip install -r requirements.txt`
 
@@ -98,7 +98,9 @@ Start by installing CUDA if you have not already: https://docs.nvidia.com/cuda/c
 
 Then install Pytorch according to the instructions: https://pytorch.org/get-started/locally/ . In most cases, it will suffice to `pip install torch`. On the ComputeCanada cluster, there may be dependency issues between the numpy and torch versions. In this case, since Modeller cannot be installed anyway, we suggest that preprocessing be performed locally, followed by only installing the requirements_inference on the cluster environment.
 
-Finally, you can install the inference-specific requirements (remember the --no-deps flag on the cluster):
+On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dependencies and load the arrow module instead with `module load arrow`. You will also have to use the --no-deps flag.
+
+Finally, you can install the inference-specific requirements:
 
 `pip install -r requirements_inference.txt`
 
