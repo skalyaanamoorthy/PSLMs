@@ -14,4 +14,4 @@ module load StdEnv/2020  gcc/9.3.0  cuda/11.4
 
 source ../pslm/bin/activate
 
-python ../inference_scripts/msa_transformer.py --db_loc '../data/Ssym_mapped.csv' --output '../data/Ssym_mapped_preds.csv'
+python ../inference_scripts/msa_transformer.py --db_loc '../data/preprocessed/ssym_mapped.csv' --output '../data/inference/ssym_mapped_preds.csv'

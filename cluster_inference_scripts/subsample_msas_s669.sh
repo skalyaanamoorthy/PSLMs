@@ -14,7 +14,7 @@ source ../pslm/bin/activate
 
 ### The below section looks up information on the protein like the sequence and MSA of interest
 IFS=','
-text=$(cat ../data/s669_mapped.csv | head -n $((${SLURM_ARRAY_TASK_ID}+2)) | tail -n 1)
+text=$(cat ../data/preprocessed/s669_mapped.csv | head -n $((${SLURM_ARRAY_TASK_ID}+2)) | tail -n 1)
 read -a strarr <<< "$text"
 code=${strarr[1]}; echo $code
 chain=${strarr[2]}; echo $chain

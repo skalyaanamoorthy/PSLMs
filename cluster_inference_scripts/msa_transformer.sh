@@ -14,5 +14,5 @@ module load StdEnv/2020  gcc/9.3.0  cuda/11.4
 
 source ../pslm/bin/activate
 
-#python ../inference_scripts/msa_transformer.py --db_loc '../data/s669_mapped.csv' --output '../data/s669_mapped_preds.csv'
-python ../inference_scripts/msa_transformer.py --db_loc '../data/fireprot_mapped.csv' --output '../data/fireprot_mapped_preds.csv'
+python ../inference_scripts/msa_transformer.py --db_loc '../data/preprocessed/s669_mapped.csv' --output '../data/inference/s669_mapped_preds.csv'
+python ../inference_scripts/msa_transformer.py --db_loc '../data/preprocessed/fireprot_mapped.csv' --output '../data/inference/fireprot_mapped_preds.csv'
