@@ -184,8 +184,8 @@ def repair_pdb(pdb_file, output_file):
     mdl.write(file=output_file)
 
 
-def extract_structure(code, chain, d, prot_path, prot_file, STRUCTURES_DIR, 
-                      compressed=True):
+def extract_structure(code, chain, d, prot_path, prot_file,
+                        STRUCTURES_DIR, compressed=True):
     """
     Using the gzip assembly from the PDB, parse the file to get the sequence of 
     interest from the structure
@@ -364,7 +364,7 @@ def extract_structure(code, chain, d, prot_path, prot_file, STRUCTURES_DIR,
             [res[0] for res in chains_orig[target_chain]]
         mapping.loc[mapping['repaired_seq']!='-', 'sequential_id'] = \
             [res[0] for res in chains[target_chain]]
-    #print(mapping.head(20))
+
     multimer = len(chains.keys())
 
     return mapping, is_nmr, multimer
@@ -372,7 +372,7 @@ def extract_structure(code, chain, d, prot_path, prot_file, STRUCTURES_DIR,
 
 def align_sequence_structure(code, chain, pdb_ungapped, dataset, mapping_df,
                              SEQUENCES_DIR, WINDOWS_DIR, ALIGNMENTS_DIR, 
-                             min_pos, max_pos, uniprot_seq=None):
+                             min_pos, max_pos, indexer, uniprot_seq=None):
     """
     In this critical preprocessing step, the mutations from the database are 
     mapped to the structures that will be used by inverse folding methods 
@@ -444,8 +444,11 @@ def align_sequence_structure(code, chain, pdb_ungapped, dataset, mapping_df,
 
     mapping_df = mapping_df.rename({'repaired_seq': 'pdb_gapped'}, axis=1)
     alignment_df = alignment_df.merge(
-        mapping_df, on=['sequential_id', 'pdb_gapped'], how='outer'
-        ).drop_duplicates(subset='uniprot_id', keep='first')
+        mapping_df, on=['sequential_id', 'pdb_gapped'], how='outer')
+        #).drop_duplicates(subset='uniprot_id', keep='first')
+    #alignment_df['uniprot_id'] = alignment_df['uniprot_id'].astype(int)
+    #alignment_df['sequential_id'] = alignment_df['sequential_id'].astype(int)
+    alignment_df['chosen_index'] = alignment_df[indexer]
 
     alignment_df.to_csv(
         os.path.join(ALIGNMENTS_DIR, f'{code}_uniprot_aligned.csv')
@@ -456,12 +459,13 @@ def align_sequence_structure(code, chain, pdb_ungapped, dataset, mapping_df,
     # sequence: the first 1023 residues which also fully cover the structure, 
     # extending past the N- and then C- terminus if there is space
 
-    # mutants are always within the structure range
+    # assume mutants are always within the structure range
     if dataset != 'fireprot':
         window_start = alignment_df.set_index(
-            'author_id').at[min_pos, 'sequential_id']
+            'chosen_index').at[min_pos, 'sequential_id']
         window_end = alignment_df.set_index(
-            'author_id').at[max_pos, 'sequential_id']
+            'chosen_index').at[max_pos, 'sequential_id']
+        #print(window_start)
         # we now have the start and end of the mutant range, extend it to include 
         # the whole structure
         while window_start > 1 and \
@@ -480,6 +484,7 @@ def align_sequence_structure(code, chain, pdb_ungapped, dataset, mapping_df,
         window_start = min_pos
         window_end = max_pos
 
+    #print(window_start, min_pos, max_pos)
     # if there is no Uniprot at the start of the sequence, just use it all
     if np.isnan(window_start):
         window_start = 1
@@ -521,14 +526,6 @@ def get_offsets(wt, pos, dataset, alignment_df):
     """
     mismatch = False
     no_match = False
-    # location of the mutation in the alignment
-    # indexing is based on UniProt for FireProtDB, PDB for S669
-    #if dataset == 'fireprot':
-    #    idx_mut = alignment_df.loc[
-    #        alignment_df['uniprot_gapped']!='-'].head(pos).tail(1).index.item()
-    #else:
-    #    idx_mut = alignment_df.loc[
-    #        alignment_df['pdb_gapped']!='-'].head(pos).tail(1).index.item()
     
     seq1 = ''.join(list(alignment_df['uniprot_gapped']))
     seq2 = ''.join(list(alignment_df['pdb_gapped']))
@@ -538,35 +535,27 @@ def get_offsets(wt, pos, dataset, alignment_df):
     seq2_ = list(seq2)
 
     # case where the PDB is mutated relative to UniProt (or has gap)
-    if dataset != 'fireprot':
-        pdb_res = alignment_df.set_index('author_id').loc[pos, 'pdb_gapped']
-        up_res = alignment_df.set_index('author_id').loc[pos, 'uniprot_gapped']
-        up = alignment_df.set_index('author_id').at[pos, 'uniprot_id']
+    pdb_res = alignment_df.set_index('chosen_index').loc[pos, 'pdb_gapped']
+    up_res = alignment_df.set_index('chosen_index').loc[pos, 'uniprot_gapped']
+    up = alignment_df.set_index('chosen_index').at[pos, 'uniprot_id']
+    try:
         up = int(up)
-        sid = alignment_df.set_index('author_id').at[pos, 'sequential_id']
-        idx_mut = alignment_df.reset_index().set_index(
-            'author_id').at[pos, 'index']
-        offset_up = sid - up
-        seq1_.insert(idx_mut, '[')
-        seq1_.insert(idx_mut+2, ']')
-        seq1_ = ''.join(seq1_)
-        seq2_.insert(idx_mut, '[')
-        seq2_.insert(idx_mut+2, ']')
-        seq2_ = ''.join(seq2_) 
-    else:
-        pdb_res = alignment_df.set_index('uniprot_id').loc[pos, 'pdb_gapped']
-        up_res = alignment_df.set_index('uniprot_id').loc[pos, 'uniprot_gapped']
-        up = pos
-        sid = alignment_df.set_index('uniprot_id').at[pos, 'sequential_id']
-        idx_mut = alignment_df.reset_index().set_index(
-            'uniprot_id').at[pos, 'index']
-        offset_up = sid - pos
-        seq1_.insert(idx_mut, '[')
-        seq1_.insert(idx_mut+2, ']')
-        seq1_ = ''.join(seq1_)
-        seq2_.insert(idx_mut, '[')
-        seq2_.insert(idx_mut+2, ']')
-        seq2_ = ''.join(seq2_)
+    except ValueError:
+        return np.nan, np.nan, np.nan
+    except TypeError:
+        print('Unknown position', wt, pos)
+        return np.nan, np.nan, np.nan
+
+    sid = alignment_df.set_index('chosen_index').at[pos, 'sequential_id']
+    idx_mut = alignment_df.reset_index().set_index(
+        'chosen_index').at[pos, 'index']
+    offset_up = sid - up
+    seq1_.insert(idx_mut, '[')
+    seq1_.insert(idx_mut+2, ']')
+    seq1_ = ''.join(seq1_)
+    seq2_.insert(idx_mut, '[')
+    seq2_.insert(idx_mut+2, ']')
+    seq2_ = ''.join(seq2_) 
     if pdb_res == '-':
         print(seq1_)
         print(seq2_)

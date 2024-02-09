@@ -491,8 +491,8 @@ def extract_features(database_loc, path):
 
             # -1 for 0-based indexing
             if 'fireprot' not in args.db_loc.lower():
-                target_pos_up = row['position'] + \
-                    -row['offset_up'] - 1
+                target_pos_up = int(row['position'] + \
+                    -row['offset_up'] - 1)
             else:
                 target_pos_up = row['position_orig'] - 1
             

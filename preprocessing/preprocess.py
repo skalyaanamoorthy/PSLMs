@@ -11,6 +11,7 @@ import argparse
 import utils
 import glob
 import re
+import requests
 
 import pandas as pd
 import numpy as np
@@ -120,7 +121,13 @@ def main(args):
             'mutant ': 'mutation'}, axis=1)
     elif 'korpm' in args.db_loc.lower():
         db.loc[db['code']=='1IV7', 'position'] -= 100
-
+    elif 'proteingym' in args.db_loc.lower():
+        db = db.loc[~db['mutant'].str.contains(':')]
+        db['code'] = args.use_code if args.use_code else 'PG00'
+        db['chain'] = 'A'
+        db['wild_type'] = db['mutant'].str[0]
+        db['position'] = db['mutant'].str[1:-1].astype(int)
+        db['mutation'] = db['mutant'].str[-1]
     else:
         print('Running with a custom user-specified database\n' 
               'This is NOT desired behaviour for reproducing benchmarks')
@@ -138,14 +145,11 @@ def main(args):
     hit = pd.DataFrame() # collection of successfully parsed mutations
 
     # mutations which were not successfully parsed
-    miss = pd.DataFrame(columns=['code', 'wt', 'pos', 'mut']) 
+    miss = pd.DataFrame(columns=['code', 'wt', 'pos', 'mut'])
     missing_msas = []
 
     # iterate through one PDB code at a time, e.g. all sharing the wt structure
     for (code, struct, chain), group in db.groupby(grouper):
-        
-        if code == '1QM0':
-            continue
         # chains listed in database do not always correspond to the assembly
         if code in wrong_chains and dataset in ['fireprot', 's669']:
             chain = wrong_chains[code]
@@ -166,21 +170,24 @@ def main(args):
             os.path.join(RESULTS_DIR, f'{struct}_{chain}'), exist_ok=True
             )
 
-        # get the biological assembly, which includes multivmeric structures
-        prot_path, prot_file = utils.download_assembly(
-            struct, chain, BIO_ASSEMBLIES_DIR
-            )
+        if not args.use_pdb:
+            # get the biological assembly, which includes multivmeric structures
+            prot_path, prot_file = utils.download_assembly(
+                struct, chain, BIO_ASSEMBLIES_DIR
+                )
 
-        # get the pdb sequence corresponding to the entry
-        mapping_df, is_nmr, multimer = utils.extract_structure(
-            struct, chain, d, prot_path, prot_file, STRUCTURES_DIR
-            )
+            # get the pdb sequence corresponding to the entry
+            mapping_df, is_nmr, multimer = utils.extract_structure(
+                struct, chain, d, prot_path, prot_file, STRUCTURES_DIR)
 
-        #mapping_df.to_csv('test.csv')
+        else:
+            prot_file = os.path.basename(args.use_pdb)
+            mapping_df, is_nmr, multimer = utils.extract_structure(
+                struct, chain, d, args.use_pdb, prot_file,
+                STRUCTURES_DIR, compressed=False)            
 
         pdb_ungapped = ''.join(list(mapping_df.loc[
             mapping_df['repaired_seq'] != '-', 'repaired_seq']))
-        #print(pdb_ungapped)
 
         if dataset == 'fireprot':
             # in the FireProtDB, the UniProt sequence is provided
@@ -190,45 +197,78 @@ def main(args):
             'w') as f:
                 f.write(f'>{code}_{chain}\n{uniprot_seq}')
 
+        if args.use_uniprot:
+            req2 = f'https://rest.uniprot.org/uniprotkb/{args.use_uniprot}'
+            r2 = requests.get(req2).text
+            r2 = r2.split('"sequence":{"value":')[-1].split(',')[0].strip('\""')
+            uniprot_seq = r2
+
+            with open(
+                os.path.join(
+                    SEQUENCES_DIR, 'fasta_up', f'{code}_{chain}.fa'), 'w'
+                ) as f:
+                    f.write(f'>{code}_{chain}\n{uniprot_seq}')
         # assume we need to get the uniprot sequence corresponding to the entry
         # UniProt comes from the wt for Ssym
-        if dataset != 'fireprot' or code == '1HTI':
+        elif dataset != 'fireprot' or code == '1HTI':
             uniprot_seq, accession = utils.get_uniprot(
                 code, chain, SEQUENCES_DIR
                 )
+
         # align the pdb sequence to the uniprot sequence
         alignment_df, window_start, pdb_ungapped, uniprot_seq = \
             utils.align_sequence_structure(
                 code, chain, pdb_ungapped, dataset, mapping_df,
                 SEQUENCES_DIR, WINDOWS_DIR, ALIGNMENTS_DIR, 
-                group['position'].min(), group['position'].max(), uniprot_seq
-                )
+                group['position'].min(), group['position'].max(), args.indexer,
+                uniprot_seq)
 
-        # create a convenience link to the alignment file
-        # note: this MSA (included in the repo) is already reduced
-        # to the context of interest and has no more than 90% identity
-        # between sequences and no less than 75% coverage per sequence
-        matching_files = glob.glob(
-            os.path.join(args.alignments, f'{code}_*.a3m')
-            )
-        assert len(matching_files) <= 1, \
-            f"Expected one file, but found {len(matching_files)}"
-        if len(matching_files) == 0:
-            exp = "un" if code not in ["1DXX", "1JL9", "1TIT"] else ""
-            print(f'Did not find an MSA for {code}. This is {exp}expected')
-            missing_msas.append(code)
-            new_msa = ''
+        if not args.use_msa:
+            # create a convenience link to the alignment file
+            # note: this MSA (included in the repo) is already reduced
+            # to the context of interest and has no more than 90% identity
+            # between sequences and no less than 75% coverage per sequence
+            matching_files = glob.glob(
+                os.path.join(args.alignments, f'{code}_*.a3m')
+                )
+            assert len(matching_files) <= 1, \
+                f"Expected one file, but found {len(matching_files)}"
+            if len(matching_files) == 0:
+                exp = "un" if code not in ["1DXX", "1JL9", "1TIT"] else ""
+                print(f'Did not find an MSA for {code}. This is {exp}expected')
+                missing_msas.append(code)
+                new_msa = ''
+            else:
+                orig_msa = os.path.abspath(matching_files[0])
+                new_msa = os.path.join(internal_path, args.alignments, 
+                    os.path.basename(orig_msa))
+
+            matching_weights = glob.glob(
+                os.path.join('data', 'preprocessed', 'weights', f'{code}_*.npy')
+                )
+            assert len(matching_weights) <= 1, \
+                f"Expected one file, but found {len(matching_weights)}"
+            if len(matching_weights) == 0:
+                print(f'Did not find sequence weights for MSA for {code}')
+            else:
+                orig_weights = os.path.abspath(matching_weights[0])
+                msa_weights = os.path.join(internal_path, 'data', 
+                    'preprocessed', 'weights', os.path.basename(orig_weights))            
         else:
-            orig_msa = os.path.abspath(matching_files[0])
-            new_msa = os.path.join(internal_path, 'data', 'msas', 
-                os.path.basename(orig_msa))
+            new_msa = args.use_msa
+            msa_weights = os.path.join(internal_path, 'data', 
+                    'preprocessed', 'weights', 
+                    os.path.basename(new_msa).replace('.a3m', '.npy')) 
 
         # need the original chain to refer to predicted structures  
         chain_orig = orig_chains[code] \
             if code in orig_chains.keys() else chain
 
         # create a convenience link to the structure file
-        pdb_file = os.path.join(STRUCTURES_DIR, f'{struct}_{chain}.pdb')
+        if not args.use_pdb:
+            pdb_file = os.path.join(STRUCTURES_DIR, f'{struct}_{chain}.pdb')
+        else:
+            pdb_file = os.path.join(STRUCTURES_DIR, prot_file)
         pdb_file = re.sub(output_path, internal_path, pdb_file)
 
         if sym:
@@ -257,14 +297,12 @@ def main(args):
 
             # second validation that mutants are correct
             if not np.isnan(offset_up):
-                #try:
                 if uniprot_seq[seq_pos -1 - offset_up] != wt:
                     p = seq_pos -1 - offset_up
                     print('UniProt mismatch detected.')
-                #try:
-                if dataset != 'fireprot':
-                    assert pu[seq_pos -1] == wt
-                elif pu[seq_pos -1] != wt:
+                #if dataset != 'fireprot':
+                #    assert pu[seq_pos -1] == wt
+                if pu[seq_pos -1] != wt:
                      print('Warning! PDB at mutation does not match wt')
 
                 # format the mutant sequence as required by each method
@@ -296,6 +334,7 @@ def main(args):
                     'offset_up':offset_up, 'window_start': window_start, 
                     'is_nmr':is_nmr,'multimer': multimer,
                     'pdb_file': pdb_file, 'msa_file': new_msa, 
+                    'msa_weights': msa_weights,
                     'tranception_dms': os.path.join(internal_path,
                     'DMS_Tranception', f'{struct}_{chain}_{dataset}.csv'),  
                     'mismatch': mismatch   
@@ -364,8 +403,10 @@ def main(args):
     out = out[aligned_cols + remaining_cols]
 
     # this is the main input file for all PSLMs
-    out.to_csv(os.path.join(
-        output_path, DATA_DIR, f'{dataset_outname}_mapped.csv'))
+    outloc = os.path.join(
+        output_path, DATA_DIR, f'{dataset_outname}_mapped.csv')
+    out.to_csv(outloc)
+    print(f'Saved mapped database to {outloc}')
 
     if dataset_outname == 's669':
 
@@ -404,9 +445,6 @@ def main(args):
     print('Missing MSA indices:')
     print(' '.join(missing_indices))
 
-    #with open(os.path.join(
-    #    output_path, DATA_DIR, f'{dataset}_rosetta_indices.txt'
-    #    ), 'w') as f:
     inds = sorted(list(grouped.groupby(['code', 'chain']).first()['index']))
     print(len(inds))
     inds = ','.join([str(s) for s in inds])
@@ -416,8 +454,8 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser(
                     description = 'Preprocesses data to facilitate'
                         'downstream prediction')
-    parser.add_argument('--dataset', help='name of database (s669/fireprot),'
-                        'assuming you are in the root of the repository',
+    parser.add_argument('--dataset', help='name of database (s669/fireprot), '
+                        +'assuming you are in the root of the repository',
                       default='q3421')
     parser.add_argument('--db_loc', help='location of database,'
                         'only specify if you are using a custom DB',
@@ -431,22 +469,29 @@ if __name__=='__main__':
     parser.add_argument('-a', '--alignments',
                         help='folder where redundancy-reduced alignments are',
                         default='./data/msas')
-    parser.add_argument('--rosetta', action='store_true', 
-                        help='whether to get Rosetta offsets'
-                        +' (only use when Rosetta relax has been run')
-    parser.add_argument('--inverse', action='store_true', 
-                        help='whether to get offsets from (Robetta) predicted '
-                        +'mutant structures only use when Rosetta relax has '
-                        +'been run on Robetta structures')
+    parser.add_argument('-w', '--weights',
+                        help='folder where saved sequence reweightings are',
+                        default='./data/preprocessed')
     parser.add_argument('--verbose', action='store_true',
                         help='whether to save which mutations could not be ' 
                         +'parsed')
+    parser.add_argument('--indexer', help='which type of index specifies '
+                        +'the mutation locations', default='author_id')
+    parser.add_argument('--use_pdb', help='specify a single PDB file rather '
+                        +'than obtaining one automatically')
+    parser.add_argument('--use_uniprot', help='specify a Uniprot ID rather '
+                        +'than obtaining one automatically')
+    parser.add_argument('--use_msa', help='specify an MSA location rather '
+                        +'than obtaining one automatically')
+    parser.add_argument('--use_code', help='specify a unique code rather '
+                        +'than obtaining one automatically')
 
     args = parser.parse_args()
     if args.dataset.lower() in ['q3421']:
         args.db_loc = './data/external_datasets/Q3421.csv'
     elif args.dataset.lower() in ['fireprot', 'fireprotdb']:
         args.db_loc = './data/external_datasets/fireprotdb_results.csv'
+        args.indexer = 'uniprot_id'
     elif args.dataset.lower() in ['s669', 's461']:
         args.db_loc = './data/external_datasets/Data_s669_with_predictions.csv'
         args.dataset = 's669'
