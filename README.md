@@ -108,7 +108,7 @@ Install evcouplings separately if you haven't already:
 
 You can quickly demo inference using MIF (fastest to download the model and run inference):
 
-`python ./inference_scripts/mif.py  --db_loc './data/preprocessed/q3421_mapped.csv' --output './data/inference/q3421_mapped_preds.csv'`
+`python ./inference_scripts/mif.py  --db_loc './data/preprocessed/q3421_mapped.csv' --output './data/inference/q3421_mapped_preds.csv' --model mif`
 
 Note that the predictions in ./data/inference/q3421_mapped_preds.csv will be overwritten, but should be identical.
 
