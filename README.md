@@ -48,7 +48,7 @@ Clone the repository:
 
 If you want to also download all associated data, you may need to obtain GitLFS. Then:
 
- `git lfs install`
+ `git lfs install --skip-smudge`
 
  `git lfs pull`
 
