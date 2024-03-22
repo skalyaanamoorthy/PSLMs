@@ -41,8 +41,8 @@ def download_assembly(code, chain, BIO_ASSEMBLIES_DIR):
         try:
             # for some reason this is the one bio assembly that doesn't exist
             # so use monomer instead
-            if code in ['1W4E', '1E0L', '1GYZ', '1H92', '1QLY', '1URF', '1V1C',
-                        '1W4F', '1W4G', '1W4H', '2WNM']:
+            if code in ['1W4E', '1E0L', '1GYZ', '1H92', '1QLY', '1QM0',
+                        '1URF', '1V1C', '1W4F', '1W4G', '1W4H', '2WNM']:
                 urllib.request.urlretrieve(
                     f'http://files.rcsb.org/download/{code}.pdb.gz',
                     prot_path
@@ -68,47 +68,58 @@ def download_assembly(code, chain, BIO_ASSEMBLIES_DIR):
     return prot_path, prot_file
 
 
-def get_uniprot(code, chain, SEQUENCES_DIR):
+def get_uniprot(code, chain, SEQUENCES_DIR, uniprot_id=None):
     """
     Gets the UniProt sequence (and accession code, for computing features)
     for specifically S669 / S461 proteins, since these are not provided with
     the database. Uses the PDB sequence if this cannot be found.
     """
+    viral = False
 
-    # uniprot entries corresponding to multichain PDBs may need to be specified   
-    if code in ['1AON', '1GUA', '1GLU', '1OTR', '2CLR', '3MON']:
-         entity = 2
-    elif code in ['1HCQ', '1TUP', '3DV0']:
-         entity = 3
-    else:
-         entity = 1
+    if uniprot_id is None:
+        # uniprot entries corresponding to multichain PDBs may need to be specified   
+        if code in ['1AON', '1GUA', '1GLU', '1OTR', '2CLR', '3MON']:
+            entity = 2
+        elif code in ['1HCQ', '1TUP', '3DV0']:
+            entity = 3
+        else:
+            entity = 1
 
-    # get the uniprotkb data associated with the PDB code if it existss
-    req = (
-        f'https://www.ebi.ac.uk/pdbe/graph-api/pdbe_pages/uniprot_mapping/'
-        f'{code.lower()}/{entity}'
-    )
+        # get the uniprotkb data associated with the PDB code if it existss
+        req = (
+            f'https://www.ebi.ac.uk/pdbe/graph-api/pdbe_pages/uniprot_mapping/'
+            f'{code.lower()}/{entity}'
+        )
 
-    # convert json to Python
-    r = requests.get(req).text.replace('true','True').replace('false','False')
-    r = eval(r)
+        # convert json to Python
+        r = requests.get(req).text.replace('true','True').replace('false','False')
+        r = eval(r)
 
     # get specifically the sequence related to the target structure
     try:
-        data = r[code.lower()]
-        # get the uniprotkb accession (skip interpro entries which have _)
-        num = -1
-        accession = '_'
-        while '_' in accession:
-            num += 1
-            accession = data['data'][num]['accession']
+        if uniprot_id is None:
+            data = r[code.lower()]
+            # get the uniprotkb accession (skip interpro entries which have _)
+            num = -1
+            accession = '_'
+            while '_' in accession:
+                num += 1
+                accession = data['data'][num]['accession']
+        else:
+            accession = uniprot_id
 
         # query uniprotkb for the accession to get the FULL sequence 
         # (used for alignment searching as it gives improved performance)
         req2 = f'https://rest.uniprot.org/uniprotkb/{accession}'
-        r2 = requests.get(req2).text
-        r2 = r2.split('"sequence":{"value":')[-1].split(',')[0].strip('\""')
-        uniprot_seq = r2
+        up_info = requests.get(req2).text
+        uniprot_seq = up_info.split(
+            '"sequence":{"value":')[-1].split(',')[0].strip('\""')
+        lineage = up_info.split(
+            '"lineage":[')[-1].split(']')[0].strip('\""')
+        print(lineage)
+        
+        if "Viruses" in lineage:
+            viral = True
 
         with open(
             os.path.join(SEQUENCES_DIR, 'fasta_up', f'{code}_{chain}.fa'), 'w'
@@ -126,7 +137,7 @@ def get_uniprot(code, chain, SEQUENCES_DIR):
     if code in ['1IV7', '1IV9']:
         uniprot_seq = None
 
-    return uniprot_seq, accession
+    return uniprot_seq, accession, viral
 
 
 def renumber_pdb(pdb_file, output_file):
