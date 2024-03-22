@@ -197,23 +197,27 @@ def main(args):
             'w') as f:
                 f.write(f'>{code}_{chain}\n{uniprot_seq}')
 
-        if args.use_uniprot:
-            req2 = f'https://rest.uniprot.org/uniprotkb/{args.use_uniprot}'
-            r2 = requests.get(req2).text
-            r2 = r2.split('"sequence":{"value":')[-1].split(',')[0].strip('\""')
-            uniprot_seq = r2
+        # replaces UniProt sequence
+        if args.use_target_seq:
+            uniprot_seq = args.use_target_seq
 
-            with open(
-                os.path.join(
-                    SEQUENCES_DIR, 'fasta_up', f'{code}_{chain}.fa'), 'w'
-                ) as f:
-                    f.write(f'>{code}_{chain}\n{uniprot_seq}')
-        # assume we need to get the uniprot sequence corresponding to the entry
-        # UniProt comes from the wt for Ssym
-        elif dataset != 'fireprot' or code == '1HTI':
-            uniprot_seq, accession = utils.get_uniprot(
-                code, chain, SEQUENCES_DIR
-                )
+        else:
+            if args.use_uniprot:
+                uniprot_seq, accession, viral = utils.get_uniprot(
+                    code, chain, SEQUENCES_DIR, uniprot_id=args.uniprot
+                    )
+                uniprot_seq = args.use_uniprot
+
+            # assume we need to get the uniprot sequence corresponding to the entry
+            # UniProt comes from the wt for Ssym
+            elif args.dataset != 'fireprot' or code == '1HTI':
+                uniprot_seq, accession, viral = utils.get_uniprot(
+                    code, chain, SEQUENCES_DIR
+                    )
+            else:
+                _, accession, viral = utils.get_uniprot(
+                    code, chain, SEQUENCES_DIR
+                    )
 
         # align the pdb sequence to the uniprot sequence
         alignment_df, window_start, pdb_ungapped, uniprot_seq = \
@@ -250,6 +254,7 @@ def main(args):
                 f"Expected one file, but found {len(matching_weights)}"
             if len(matching_weights) == 0:
                 print(f'Did not find sequence weights for MSA for {code}')
+                msa_weights = ''
             else:
                 orig_weights = os.path.abspath(matching_weights[0])
                 msa_weights = os.path.join(internal_path, 'data', 
@@ -337,7 +342,7 @@ def main(args):
                     'msa_weights': msa_weights,
                     'tranception_dms': os.path.join(internal_path,
                     'DMS_Tranception', f'{struct}_{chain}_{dataset}.csv'),  
-                    'mismatch': mismatch   
+                    'mismatch': mismatch, 'viral': viral 
                 }}).T          
                 
                 # ultimately turns into the output table used downstream
@@ -401,6 +406,7 @@ def main(args):
         'offset_up', 'uniprot_seq', 'msa_file']
     remaining_cols = list(out.columns.drop(aligned_cols))
     out = out[aligned_cols + remaining_cols]
+    out = out.sort_values(['code', 'chain', 'position', 'mutation'])
 
     # this is the main input file for all PSLMs
     outloc = os.path.join(
@@ -445,7 +451,12 @@ def main(args):
     print('Missing MSA indices:')
     print(' '.join(missing_indices))
 
-    inds = sorted(list(grouped.groupby(['code', 'chain']).first()['index']))
+    if args.dataset.lower() == 'ssym':
+        inds = sorted(list(
+            grouped.groupby(['wt_code', 'chain']).first()['index']))
+    else:
+        inds = sorted(list(
+            grouped.groupby(['code', 'chain']).first()['index']))
     print(len(inds))
     inds = ','.join([str(s) for s in inds])
     print(inds)
@@ -485,6 +496,8 @@ if __name__=='__main__':
                         +'than obtaining one automatically')
     parser.add_argument('--use_code', help='specify a unique code rather '
                         +'than obtaining one automatically')
+    parser.add_argument('--use_target_seq', help='specify the sequence to be ' 
+                        +'used by Tranception')
 
     args = parser.parse_args()
     if args.dataset.lower() in ['q3421']:
@@ -497,6 +510,8 @@ if __name__=='__main__':
         args.dataset = 's669'
     elif args.dataset.lower() in ['ssym']:
         args.db_loc = './data/external_datasets/ssym.csv'
+    elif args.dataset.lower() == 'korpm':
+        args.db_loc = './data/external_datasets/korpm_training_data.csv'
     else:
         print('Inferred use of user-created database. Note: this must '
               'contain columns for code, wild_type, position, mutation. '
