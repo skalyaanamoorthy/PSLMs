@@ -15,7 +15,7 @@ def score_sequences(args):
     df2 = df.groupby('uid').first()
     dataset = args.dataset
 
-    logps = pd.DataFrame(index=df2.index, columns=['esm2_dir', 'runtime_esm2_dir'])
+    logps = pd.DataFrame(index=df2.index, columns=['esm2_3B_dir', 'runtime_esm2_3B_dir'])
 
     # Replace esm's load function with Hugging Face's
     # The tokenizer is included in case you need it later for tokenization
@@ -75,21 +75,21 @@ def score_sequences(args):
                         wt_encoded, mt_encoded = alphabet.get_idx(wt), alphabet.get_idx(mt)
                         score = token_probs[0, 1 + idx, mt_encoded] - token_probs[0, 1 + idx, wt_encoded]
 
-                        logps.at[uid, f'esm2_dir'] = score.item()
-                        logps.at[uid, f'runtime_esm2_dir'] = time.time() - start
+                        logps.at[uid, f'esm2_3B_dir'] = score.item()
+                        logps.at[uid, f'runtime_esm2_3B_dir'] = time.time() - start
                     #except:
                     #    print('failed: ', code, wt, pos, mt)
-                    #    logps.at[uid, f'esm2_dir'] = np.nan
-                    #    logps.at[uid, f'runtime_esm2_dir'] = np.nan
+                    #    logps.at[uid, f'esm2_3B_dir'] = np.nan
+                    #    logps.at[uid, f'runtime_esm2_3B_dir'] = np.nan
                     pbar.update(1)
     
     df = pd.read_csv(args.output, index_col=0)
     logps.index.name = 'uid'
     df = pd.read_csv(args.output, index_col=0)
-    if f'esm2_dir' in df.columns:
-        df = df.drop(f'esm2_dir', axis=1)
-    if f'runtime_esm2_dir' in df.columns:
-        df = df.drop(f'runtime_esm2_dir', axis=1)
+    if f'esm2_3B_dir' in df.columns:
+        df = df.drop(f'esm2_3B_dir', axis=1)
+    if f'runtime_esm2_3B_dir' in df.columns:
+        df = df.drop(f'runtime_esm2_3B_dir', axis=1)
     df = df.join(logps)
     df.to_csv(args.output)
 

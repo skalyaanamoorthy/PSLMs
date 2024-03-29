@@ -33,7 +33,7 @@ def main(args):
 
     data = data_utils.MSA_processing(
             MSA_location=a_file,
-            theta=0.2,
+            theta=args.theta,
             use_weights=True,
             weights_location=args.output_folder + os.path.basename(a_file).replace('a3m', 'npy')
     )
@@ -53,9 +53,7 @@ if __name__=='__main__':
     parser.add_argument('-o', '--output_folder', 
                         help='root of folder to store outputs',
                         default='.')
-    #parser.add_argument('-a', '--alignments',
-    #                    help='folder where redundancy-reduced alignments are',
-    #                    default='./data/msas')
+    parser.add_argument('-t', '--theta', default=0.2)
     parser.add_argument('--tranception_loc', type=str,
                         help='location of the tranception repository',
                         required=True
