@@ -63,7 +63,14 @@ remap_names = {
     'mpnn_10_00': 'ProteinMPNN 0.1', 
     'mpnn_20_00': 'ProteinMPNN 0.2', 
     'mpnn_30_00': 'ProteinMPNN 0.3', 
-    'tranception': 'Tranception',    
+    'mpnn_sol_10_00': 'ProteinMPNN_sol 0.1', 
+    'mpnn_sol_20_00': 'ProteinMPNN_sol 0.2', 
+    'mpnn_sol_30_00': 'ProteinMPNN_sol 0.3', 
+    'tranception': 'Tranception', 
+    'tranception_weights': 'Tranception_reweighted',
+    'tranception_original': 'Tranception_original',
+    'tranception_reproduced': 'Tranception_reproduced',
+    'tranception_target': 'Tranception_target',
     'esm1v_2': 'ESM-1V 2', 
     'msa_1': 'MSA-T 1', 
     'korpm': 'KORPM', 
@@ -494,7 +501,7 @@ def make_bar_chart(df, models, title, figsize=(12, 12), xlim=(-1, 1)):
     plt.show()
 
 
-def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'random_dir'], measurements=('dTm', 'ddG'), plots=('auppc', 'aumsc'), spacing=0.02):
+def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'random_dir'], measurements=('dTm', 'ddG'), plots=('auppc', 'aumsc'), points=[10], spacing=0.02, text_offset=(-20, -0.07)):
 
     def annotate_points(ax, data, x_col, y_col, hue_col, x_values, text_offset=(0, 0), spacing=0.02):
         line_colors = {}
@@ -574,7 +581,7 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
             #axes[0, 1].set_ylabel('fraction of top mutants identified')
             ax_list[i].set_ylabel('fraction stabilizing (ΔΔG > 1 kcal/mol)')
             #ax_list[i].set_title('ΔΔG')
-            annotate_points(ax_list[i], recov, 'variable', 'value', 'model', [10], text_offset=(-20, -0.07), spacing=spacing/2)
+            annotate_points(ax_list[i], recov, 'variable', 'value', 'model', points, text_offset=text_offset, spacing=spacing/2)
             i += 1
 
         if 'aumsc' in plots:
@@ -596,7 +603,7 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
             #ax_ = sns.lineplot(data=recov, x='variable', y='value', hue='model', ax=ax_list[i])
             ax_list[i].set_xlabel('top x% of ranked predictions')
             ax_list[i].set_ylabel('mean stabilizition (kcal/mol)')
-            annotate_points(ax_list[i], recov, 'variable', 'value', 'model', [10], text_offset=(-20, -0.17), spacing=spacing*3)
+            annotate_points(ax_list[i], recov, 'variable', 'value', 'model', points, text_offset=text_offset, spacing=spacing*3)
             i += 1
 
     if 'dTm' in measurements:
@@ -617,7 +624,7 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
             ax_list[i].set_ylabel('fraction stabilizing (ΔTm > 1K)')
             #axes[0, 1].set_ylabel('fraction of top mutants identified')
             ax_list[i].set_title('ΔTm') #measurement_ = {'ddG': 'ΔΔG', 'dTm': 'ΔTm'}[measurement]
-            annotate_points(ax_list[i], recov, 'variable', 'value', 'model', [10], text_offset=(-20, -0.07), spacing=spacing/2)
+            annotate_points(ax_list[i], recov, 'variable', 'value', 'model', points, text_offset=text_offset, spacing=spacing/2)
             i += 1
 
         if 'aumsc' in plots:
@@ -632,7 +639,7 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
             ax_list[i].set_xlabel('top x% of ranked predictions')
             #axes[1, 1].set_ylabel('fraction of stablizing mutants recovered')
             ax_list[i].set_ylabel('mean stabilizition (deg. K)')
-            annotate_points(ax_list[i], recov, 'variable', 'value', 'model', [10], text_offset=(-20, -0.17), spacing=spacing*12)
+            annotate_points(ax_list[i], recov, 'variable', 'value', 'model', points, text_offset=text_offset, spacing=spacing*12)
             i += 1
 
     handles, labels = ax_list[0].get_legend_handles_labels()
@@ -917,13 +924,14 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
         if stat == 'ndcg':
             data[score_name] = 100**data[score_name].astype(float)
             data[score_name_2] = 100**data[score_name_2].astype(float)
+        print(data.loc[data[score_name]!=data[score_name_2]])
         
         sns.histplot(ax=axs[0,0], x=score_name, data=data[[score_name, 'type']].sort_values('type'), alpha=0.3, hue='type', bins=bins, stat='count', kde=True)
         axs[0,0].set_xlim((-1, 1))
         sns.scatterplot(ax=axs[1,1], data=g, x=score_name, y='measurement', hue='type', alpha=0.3)
         g = sns.jointplot(data=data, x=score_name_2, y=score_name, hue='type', kind='hist', marginal_kws=dict(bins=20), joint_kws=dict(alpha=0), height=10)
         for code, row in data.reset_index().iterrows():
-            if (row['obs'] > 50):# and (row['code'] not in ('1RTB', '1BVC', '1RN1', '1BNI', '1BPI', '1HZ6', '1OTR', '2O9P', '1AJ3', '3VUB', '1LZ1')):# \
+            if (row['obs'] > 1):# and (row['code'] not in ('1RTB', '1BVC', '1RN1', '1BNI', '1BPI', '1HZ6', '1OTR', '2O9P', '1AJ3', '3VUB', '1LZ1')):# \
             #if row['code'] in ['4E5K', '3D2A', '1ZNJ', '1WQ5', '1UHG', '1TUP', '1STN', '1QLP', '1PGA']:
                 g.ax_joint.text(row[score_name_2]-0.01, row[score_name]-0.01, f"{row['code']}:{row['obs']}", size=8)
         ax = sns.scatterplot(data=data, x=score_name_2, y=score_name, hue='type', size='obs', style='ProTherm', sizes=(2,937), ax=g.ax_joint, alpha=0.4,
@@ -973,7 +981,7 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
     return i
 
 
-def correlations_2(db_complete, score_name, score_name_2=None, min_obs=5, bins=20, corr='spearman', out=True, plot=False, direction='dir'):
+def correlations_2(db_complete, score_name, score_name_2=None, min_obs=5, bins=20, corr='spearman', out=True, plot=False, direction='dir', highlight=[], annotate=True, color_col=None, scale=1):
     print(score_name)
     dbf = db_complete.copy(deep=True)
 
@@ -1023,6 +1031,11 @@ def correlations_2(db_complete, score_name, score_name_2=None, min_obs=5, bins=2
         f = f.loc[f['model']!=ddg]
     i = f.loc[f['n_muts']>=min_obs].pivot_table(index=['code', 'n_muts'], columns=['model'], values='corr')
 
+    if color_col is not None:
+        to_join = dbf[['code', color_col]]
+        i = i.reset_index().set_index('code').join(to_join.set_index('code')).reset_index().set_index(['code', 'n_muts']).drop_duplicates()
+        print(i)
+
     ungrouped = g.corr(corr)[[ddg]]#.drop(ddg)
     ungrouped['n_total'] = len(g)
     if score_name_2 == 'tmp':
@@ -1040,24 +1053,25 @@ def correlations_2(db_complete, score_name, score_name_2=None, min_obs=5, bins=2
         axs[0].set_xlim((-1, 1))
         plt.show()
         data=i
-        g = sns.jointplot(data=data, x=score_name_2, y=score_name, kind='hist', 
-                          marginal_kws=dict(bins=20), joint_kws=dict(alpha=0), height=30)
+        g = sns.jointplot(data=data, x=score_name_2, y=score_name, kind='kde', # marginal_kws=dict(bins=20),
+                          joint_kws=dict(alpha=0), height=30*scale, hue=color_col)
         
-        threshold = 0.005
-        for idx, row in data.reset_index().iterrows():
-            tmp_data = data.reset_index().drop(idx).loc[(data.reset_index().drop(idx)[score_name]-row[score_name])**2 < threshold]
-            tmp_data_2 = tmp_data.loc[(tmp_data[score_name_2]-row[score_name_2])**2 < threshold]
-            if len(tmp_data_2) > 0:
-                dx = random.uniform(-label_shift, label_shift)
-                dx += 0.01
-                dy = random.uniform(-label_shift, label_shift)
-                dy += 0.01
-                g.ax_joint.text(row[score_name_2]+dx, row[score_name]+dy, f"{row['code']}:{row['n_muts']}", size=4*5)
-                g.ax_joint.plot([row[score_name_2], row[score_name_2]+dx], [row[score_name], row[score_name]+dy])
-            else:
-                g.ax_joint.text(row[score_name_2]+0.01, row[score_name]+0.01, f"{row['code']}:{row['n_muts']}", size=4*5)
+        if annotate:
+            threshold = 0.005
+            for idx, row in data.reset_index().iterrows():
+                tmp_data = data.reset_index().drop(idx).loc[(data.reset_index().drop(idx)[score_name]-row[score_name])**2 < threshold]
+                tmp_data_2 = tmp_data.loc[(tmp_data[score_name_2]-row[score_name_2])**2 < threshold]
+                if len(tmp_data_2) > 0:
+                    dx = random.uniform(-label_shift, label_shift)
+                    dx += 0.01
+                    dy = random.uniform(-label_shift, label_shift)
+                    dy += 0.01
+                    g.ax_joint.text(row[score_name_2]+dx, row[score_name]+dy, f"{row['code']}:{row['n_muts']}", size=4*5, color='r' if row['code'] in highlight else 'black')
+                    g.ax_joint.plot([row[score_name_2], row[score_name_2]+dx], [row[score_name], row[score_name]+dy])
+                else:
+                    g.ax_joint.text(row[score_name_2]+0.01, row[score_name]+0.01, f"{row['code']}:{row['n_muts']}", size=4*5, color='r' if row['code'] in highlight else 'black')
 
-        sns.scatterplot(data=data, x=score_name_2, y=score_name, size='n_muts', sizes=(2*100,70*100), ax=g.ax_joint, alpha=0.4)
+        sns.scatterplot(data=data, x=score_name_2, y=score_name, size='n_muts', sizes=(2*100*scale,70*100*scale), ax=g.ax_joint, alpha=0.4, hue=color_col)
         small = np.array(i[[score_name_2, score_name]].dropna()).min().min()
         sns.lineplot(data=pd.DataFrame({'x': np.arange(small, 1, 0.01), 'y': np.arange(small, 1, 0.01)}), 
                         x='x', y='y', ax=g.ax_joint, color='red')
@@ -3264,7 +3278,7 @@ def custom_recursive_feature_addition(df_train, dfs_test, cols, target, model, l
         score, _ = spearmanr(df_test[lines], df_test[target])
         lines_scores[name] = score
 
-    while remaining_features:
+    while len(remaining_features) > 0:
         best_score = -np.inf
         best_feature = None
 
