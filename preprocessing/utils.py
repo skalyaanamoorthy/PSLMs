@@ -74,13 +74,13 @@ def get_uniprot(code, chain, SEQUENCES_DIR, uniprot_id=None):
     for specifically S669 / S461 proteins, since these are not provided with
     the database. Uses the PDB sequence if this cannot be found.
     """
-    viral = False
+    origin = None
 
     if uniprot_id is None:
         # uniprot entries corresponding to multichain PDBs may need to be specified   
-        if code in ['1AON', '1GUA', '1GLU', '1OTR', '2CLR', '3MON']:
+        if code in ['1ACB', '1AON', '1GUA', '1GLU', '1OTR', '2CLR', '3MON']:
             entity = 2
-        elif code in ['1HCQ', '1TUP', '3DV0']:
+        elif code in ['1HCQ', '1NFI', '1TUP', '3DV0']:
             entity = 3
         else:
             entity = 1
@@ -114,12 +114,12 @@ def get_uniprot(code, chain, SEQUENCES_DIR, uniprot_id=None):
         up_info = requests.get(req2).text
         uniprot_seq = up_info.split(
             '"sequence":{"value":')[-1].split(',')[0].strip('\""')
-        lineage = up_info.split(
-            '"lineage":[')[-1].split(']')[0].strip('\""')
-        print(lineage)
+        origin = up_info.split(
+            '"lineage":[')[-1].split(']')[0].strip('\""').split('\"')[0]
+        #print(lineage)
         
-        if "Viruses" in lineage:
-            viral = True
+        #if "Viruses" in lineage:
+        #    viral = True
 
         with open(
             os.path.join(SEQUENCES_DIR, 'fasta_up', f'{code}_{chain}.fa'), 'w'
@@ -137,7 +137,7 @@ def get_uniprot(code, chain, SEQUENCES_DIR, uniprot_id=None):
     if code in ['1IV7', '1IV9']:
         uniprot_seq = None
 
-    return uniprot_seq, accession, viral
+    return uniprot_seq, accession, origin
 
 
 def renumber_pdb(pdb_file, output_file):
@@ -456,6 +456,11 @@ def align_sequence_structure(code, chain, pdb_ungapped, dataset, mapping_df,
     mapping_df = mapping_df.rename({'repaired_seq': 'pdb_gapped'}, axis=1)
     alignment_df = alignment_df.merge(
         mapping_df, on=['sequential_id', 'pdb_gapped'], how='outer')
+
+    if alignment_df.at[len(alignment_df)-1, 'pdb_seq'] == '9':
+        print('Removing terminal non-canonical residue')
+        alignment_df = alignment_df.loc[:len(alignment_df)-2, :]
+
         #).drop_duplicates(subset='uniprot_id', keep='first')
     #alignment_df['uniprot_id'] = alignment_df['uniprot_id'].astype(int)
     #alignment_df['sequential_id'] = alignment_df['sequential_id'].astype(int)
