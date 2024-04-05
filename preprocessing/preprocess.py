@@ -43,13 +43,11 @@ def main(args):
     ALIGNMENTS_DIR = os.path.join(output_path, 'alignments')
     SEQUENCES_DIR = os.path.join(output_path, 'sequences')
     WINDOWS_DIR = os.path.join(output_path, 'windows')
-    # this defines where results from Rosetta will be stored, for organization
-    RESULTS_DIR = os.path.join(output_path, 'results')
     DATA_DIR = os.path.join(output_path, 'data', 'preprocessed')
 
     # first build a folder structure for organizing inputs and outputs.
     for folder in [BIO_ASSEMBLIES_DIR, STRUCTURES_DIR, ALIGNMENTS_DIR, 
-                   SEQUENCES_DIR, WINDOWS_DIR, RESULTS_DIR, DATA_DIR,
+                   SEQUENCES_DIR, WINDOWS_DIR, DATA_DIR, #RESULTS_DIR
                    os.path.join(STRUCTURES_DIR, 'single_chains'),
                    os.path.join(SEQUENCES_DIR, 'fasta_wt'), 
                    os.path.join(SEQUENCES_DIR, 'fasta_mut'),
@@ -69,9 +67,32 @@ def main(args):
     
     orig_chains = {'1IV7': 'B', '3L15': 'B', '4N6V': '0'}
 
+    # to start preprocessing from the provided KORPM datasets, extra steps
+    # are needed to convert to a CSV file
+    if '1merNCL' in args.db_loc:
+        db_ = pd.read_csv(args.db_loc, sep=' ', header=None)
+        db_ = db_.rename({0: 'code', 1: 'mutant', 2: 'ddG', 3: 'pos2'}, axis=1)
+        db_['wild_type'] = db_['mutant'].str[0]
+        db_['chain'] = db_['mutant'].str[1]
+        db_['position'] = db_['mutant'].str[2:-1]
+        db_['mutation'] = db_['mutant'].str[-1]
+        db_['uid'] = db_['code']+'_'+db_['position'].astype(str)+db_['mutation']
+        db_ = db_.drop_duplicates(subset=['uid'], keep='first').drop(
+            'uid', axis=1)
+        if os.path.basename(args.db_loc) == 'Id25c03_1merNCL.txt':
+            args.db_loc = args.db_loc.replace(
+                'Id25c03_1merNCL.txt', 'korpm_full.csv')
+            db_.to_csv(args.db_loc)
+        elif os.path.basename(args.db_loc) == 'Id25c03_1merNCLB.txt':
+            args.db_loc = args.db_loc.replace(
+                'Id25c03_1merNCLB.txt', 'korpm_reduced.csv')
+            db_.to_csv(args.db_loc)
+    
     # original database needs to be at this location and can be obtained from
     # the FireProtDB website or from Pancotti et al.
     db = pd.read_csv(args.db_loc)
+    print('Loaded', args.db_loc, 'len =', len(db))
+    
     dataset = args.dataset
     dataset_outname = args.dataset
     sym = False
@@ -147,9 +168,11 @@ def main(args):
     # mutations which were not successfully parsed
     miss = pd.DataFrame(columns=['code', 'wt', 'pos', 'mut'])
     missing_msas = []
+    missing_weights = []
 
     # iterate through one PDB code at a time, e.g. all sharing the wt structure
     for (code, struct, chain), group in db.groupby(grouper):
+
         # chains listed in database do not always correspond to the assembly
         if code in wrong_chains and dataset in ['fireprot', 's669']:
             chain = wrong_chains[code]
@@ -166,9 +189,9 @@ def main(args):
             {len(group['uid'].unique())} unique mutations")
             
         # directory which will be used to organize RESULTS structure-wise
-        os.makedirs(
-            os.path.join(RESULTS_DIR, f'{struct}_{chain}'), exist_ok=True
-            )
+        #os.makedirs(
+        #    os.path.join(RESULTS_DIR, f'{struct}_{chain}'), exist_ok=True
+        #    )
 
         if not args.use_pdb:
             # get the biological assembly, which includes multivmeric structures
@@ -203,7 +226,7 @@ def main(args):
 
         else:
             if args.use_uniprot:
-                uniprot_seq, accession, viral = utils.get_uniprot(
+                uniprot_seq, accession, origin = utils.get_uniprot(
                     code, chain, SEQUENCES_DIR, uniprot_id=args.uniprot
                     )
                 uniprot_seq = args.use_uniprot
@@ -211,11 +234,11 @@ def main(args):
             # assume we need to get the uniprot sequence corresponding to the entry
             # UniProt comes from the wt for Ssym
             elif args.dataset != 'fireprot' or code == '1HTI':
-                uniprot_seq, accession, viral = utils.get_uniprot(
+                uniprot_seq, accession, origin = utils.get_uniprot(
                     code, chain, SEQUENCES_DIR
                     )
             else:
-                _, accession, viral = utils.get_uniprot(
+                _, accession, origin = utils.get_uniprot(
                     code, chain, SEQUENCES_DIR
                     )
 
@@ -233,7 +256,7 @@ def main(args):
             # to the context of interest and has no more than 90% identity
             # between sequences and no less than 75% coverage per sequence
             matching_files = glob.glob(
-                os.path.join(args.alignments, f'{code}_*.a3m')
+                os.path.join(args.alignments, f'{code}_{chain}_MSA_full_cov75_id90.a3m')
                 )
             assert len(matching_files) <= 1, \
                 f"Expected one file, but found {len(matching_files)}"
@@ -242,18 +265,24 @@ def main(args):
                 print(f'Did not find an MSA for {code}. This is {exp}expected')
                 missing_msas.append(code)
                 new_msa = ''
+                new_msa_full = ''
             else:
                 orig_msa = os.path.abspath(matching_files[0])
                 new_msa = os.path.join(internal_path, args.alignments, 
                     os.path.basename(orig_msa))
+                new_msa_full = os.path.join(
+                    internal_path, args.alignments, f'{code}_{chain}_MSA.a3m' 
+                )     
 
+            #print(os.path.join(args.weights, f'{code}_*.npy'))
             matching_weights = glob.glob(
-                os.path.join('data', 'preprocessed', 'weights', f'{code}_*.npy')
+                os.path.join(args.weights, f'{code}_*.npy')
                 )
             assert len(matching_weights) <= 1, \
                 f"Expected one file, but found {len(matching_weights)}"
             if len(matching_weights) == 0:
                 print(f'Did not find sequence weights for MSA for {code}')
+                missing_weights.append(code)
                 msa_weights = ''
             else:
                 orig_weights = os.path.abspath(matching_weights[0])
@@ -338,11 +367,11 @@ def main(args):
                     'uniprot_seq': uniprot_seq,
                     'offset_up':offset_up, 'window_start': window_start, 
                     'is_nmr':is_nmr,'multimer': multimer,
-                    'pdb_file': pdb_file, 'msa_file': new_msa, 
-                    'msa_weights': msa_weights,
+                    'pdb_file': pdb_file, 'reduced_msa_file': new_msa, 
+                    'full_msa_file': new_msa_full, 'msa_weights': msa_weights,
                     'tranception_dms': os.path.join(internal_path,
                     'DMS_Tranception', f'{struct}_{chain}_{dataset}.csv'),  
-                    'mismatch': mismatch, 'viral': viral 
+                    'mismatch': mismatch, 'origin': origin 
                 }}).T          
                 
                 # ultimately turns into the output table used downstream
@@ -372,7 +401,7 @@ def main(args):
         )
 
     print(hit)
-    # combine all the original mutation information from FireProtDB with hits
+    # combine all the original mutation information from the source with hits
     out = db.merge(hit, on=['uid'])
     print(out)
 
@@ -403,7 +432,7 @@ def main(args):
 
     # put certain columns first for postprocessing
     aligned_cols = ['code', 'chain', 'wild_type', 'position', 'mutation', 
-        'offset_up', 'uniprot_seq', 'msa_file']
+        'offset_up', 'uniprot_seq', 'reduced_msa_file', 'full_msa_file']
     remaining_cols = list(out.columns.drop(aligned_cols))
     out = out[aligned_cols + remaining_cols]
     out = out.sort_values(['code', 'chain', 'position', 'mutation'])
@@ -411,6 +440,12 @@ def main(args):
     # this is the main input file for all PSLMs
     outloc = os.path.join(
         output_path, DATA_DIR, f'{dataset_outname}_mapped.csv')
+
+    # ensure the origin column is last for convenience
+    cols = list(out.columns)
+    cols.remove('origin')
+    cols.append('origin')
+    out = out.loc[:, cols]
     out.to_csv(outloc)
     print(f'Saved mapped database to {outloc}')
 
@@ -444,12 +479,20 @@ def main(args):
         db.to_csv(os.path.join(output_path, DATA_DIR, 's461_mapped.csv'))
 
     grouped = out.reset_index(drop=True).reset_index()
-    missing_indices = grouped.loc[grouped['code'].isin(missing_msas)].groupby(
+    missing_indices = grouped.loc[
+        grouped['code'].isin(missing_msas)].groupby(
+        ['code', 'chain']).first()['index'].astype(str)
+    missing_indices_weights = grouped.loc[
+        grouped['code'].isin(missing_weights)].groupby(
         ['code', 'chain']).first()['index'].astype(str)
 
     print('Missing MSAs for', missing_msas)
     print('Missing MSA indices:')
     print(' '.join(missing_indices))
+
+    print('Missing sequence weights for', missing_weights)
+    print('Missing sequence weights indices:')
+    print(' '.join(missing_indices_weights))
 
     if args.dataset.lower() == 'ssym':
         inds = sorted(list(
@@ -479,10 +522,10 @@ if __name__=='__main__':
                         default='.')
     parser.add_argument('-a', '--alignments',
                         help='folder where redundancy-reduced alignments are',
-                        default='./data/msas')
+                        default='./data/preprocessed/msas')
     parser.add_argument('-w', '--weights',
                         help='folder where saved sequence reweightings are',
-                        default='./data/preprocessed')
+                        default='./data/preprocessed/weights')
     parser.add_argument('--verbose', action='store_true',
                         help='whether to save which mutations could not be ' 
                         +'parsed')
@@ -510,8 +553,10 @@ if __name__=='__main__':
         args.dataset = 's669'
     elif args.dataset.lower() in ['ssym']:
         args.db_loc = './data/external_datasets/ssym.csv'
-    elif args.dataset.lower() == 'korpm':
-        args.db_loc = './data/external_datasets/korpm_training_data.csv'
+    elif args.dataset.lower() in ['korpm', 'korpm_reduced']:
+        args.db_loc = './data/external_datasets/Id25c03_1merNCLB.txt'
+    elif args.dataset.lower() in ['korpm_full']:
+        args.db_loc = './data/external_datasets/Id25c03_1merNCL.txt'
     else:
         print('Inferred use of user-created database. Note: this must '
               'contain columns for code, wild_type, position, mutation. '

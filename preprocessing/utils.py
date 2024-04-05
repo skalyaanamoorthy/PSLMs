@@ -114,12 +114,14 @@ def get_uniprot(code, chain, SEQUENCES_DIR, uniprot_id=None):
         up_info = requests.get(req2).text
         uniprot_seq = up_info.split(
             '"sequence":{"value":')[-1].split(',')[0].strip('\""')
+
+        # reduce the length of the titin sequence to a relevant window
+        if code == '1TIT':
+            uniprot_seq = uniprot_seq[11742:11742+1024]
+            #print(uniprot_seq)
+
         origin = up_info.split(
             '"lineage":[')[-1].split(']')[0].strip('\""').split('\"')[0]
-        #print(lineage)
-        
-        #if "Viruses" in lineage:
-        #    viral = True
 
         with open(
             os.path.join(SEQUENCES_DIR, 'fasta_up', f'{code}_{chain}.fa'), 'w'
@@ -187,8 +189,10 @@ def repair_pdb(pdb_file, output_file):
     if filename[:4] in ['1G3P', '1IR3', '4HE7']:
         return
     # the other chain in these structures is DNA, causing errors
-    if filename[:4] in ['1AZP', '1C8C']:
+    if filename[:4] in ['1AZP', '1BNZ', '1C8C']:
         mdl = complete_pdb(env, pdb_file, model_segment=('1:A', 'LAST:A'))
+    if filename[:4] == '1R2Y':
+        mdl = complete_pdb(env, pdb_file, model_segment=('2:A', 'LAST:A'))
     # usually nothing is missing, so the structure is unchanged
     else:
         mdl = complete_pdb(env, pdb_file)
@@ -402,10 +406,10 @@ def align_sequence_structure(code, chain, pdb_ungapped, dataset, mapping_df,
         pdb_gapped = ['-']*433 + list(pdb_ungapped)
         pdb_gapped = ''.join(pdb_gapped)
         uniprot_gapped = uniprot_seq
-    elif code == '1TIT':
-        pdb_gapped = ['-']*12676 + list(pdb_ungapped)
-        pdb_gapped = ''.join(pdb_gapped)
-        uniprot_gapped = uniprot_seq
+    #elif code == '1TIT':
+    #    pdb_gapped = ['-']*12676 + list(pdb_ungapped)
+    #    pdb_gapped = ''.join(pdb_gapped)
+    #    uniprot_gapped = uniprot_seq
 
     # in most cases, it suffices to do an automatic alignment
     # code 1LVE because UniProt seq does not cover mutations
@@ -456,12 +460,12 @@ def align_sequence_structure(code, chain, pdb_ungapped, dataset, mapping_df,
     mapping_df = mapping_df.rename({'repaired_seq': 'pdb_gapped'}, axis=1)
     alignment_df = alignment_df.merge(
         mapping_df, on=['sequential_id', 'pdb_gapped'], how='outer')
+        #).drop_duplicates(subset='uniprot_id', keep='first')
 
     if alignment_df.at[len(alignment_df)-1, 'pdb_seq'] == '9':
         print('Removing terminal non-canonical residue')
         alignment_df = alignment_df.loc[:len(alignment_df)-2, :]
 
-        #).drop_duplicates(subset='uniprot_id', keep='first')
     #alignment_df['uniprot_id'] = alignment_df['uniprot_id'].astype(int)
     #alignment_df['sequential_id'] = alignment_df['sequential_id'].astype(int)
     alignment_df['chosen_index'] = alignment_df[indexer]

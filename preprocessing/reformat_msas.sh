@@ -22,6 +22,7 @@ cd ./data/msas
 name=$folder'_MSA'
 echo 'filtering MSAs'
 
+# reformat.pl from https://github.com/soedinglab/hh-suite/blob/master/scripts/reformat.pl
 perl ~/projects/def-skal/sareeves/scripts/reformat.pl sto a2m $name ${name}.a2m > log_msat.txt
 perl ~/projects/def-skal/sareeves/scripts/reformat.pl sto a3m $name ${name}.a3m -r >> log_msat.txt
 hhfilter -i ${name}.a3m -o ${name}_full_cov75_id90.a3m -cov 75 -id 90 -maxseq 100000000 >> log_msat.txt

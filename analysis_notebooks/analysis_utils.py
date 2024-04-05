@@ -54,7 +54,7 @@ remap_names = {
     'esm1v_median': 'ESM-1V median',
     'esm2_150M': 'ESM-2 150M',
     'esm2_650M': 'ESM-2 650M',
-    'esm2': 'ESM-2 3B',
+    'esm2_3B': 'ESM-2 3B',
     'esm2_15B_half': 'ESM-2 15B',
     'mif': 'MIF', 
     'mifst': 'MIF-ST', 
@@ -67,7 +67,7 @@ remap_names = {
     'mpnn_sol_20_00': 'ProteinMPNN_sol 0.2', 
     'mpnn_sol_30_00': 'ProteinMPNN_sol 0.3', 
     'tranception': 'Tranception', 
-    'tranception_weights': 'Tranception_reweighted',
+    'tranception_weights': 'Tranception reweighted',
     'tranception_original': 'Tranception_original',
     'tranception_reproduced': 'Tranception_reproduced',
     'tranception_target': 'Tranception_target',
@@ -410,10 +410,14 @@ def parse_cartesian(filename, reduce='mean'):
     # taking the lowest-energy structure generally leads to worse results
     
     # take the average of the fourth field for the first 3 lines
-    if reduce == 'mean':
-        reduced = df.groupby(2)[3].mean()
-    elif reduce == 'min':
-        reduced = df.groupby(2)[3].min()
+    try:
+        if reduce == 'mean':
+            reduced = df.groupby(2)[3].mean()
+        elif reduce == 'min':
+            reduced = df.groupby(2)[3].min()
+    except:
+        print(filename)
+        print(df)
 
     # group means/mins
     wt_red = reduced.loc['WT:']
@@ -1440,11 +1444,15 @@ def compute_stats(
                             group = group.drop_duplicates()
                             sorted_group = group.sort_values(col, ascending=False)
                             highest_meas_rank = sorted_group[meas].idxmax()
-                            #print(sorted_group)
-                            rank_of_highest_meas = sorted_group.index.get_loc(highest_meas_rank) + 1
-                            #print(highest_meas_rank)
-                            #print(rank_of_highest_meas)
+
+                            rank_of_highest_meas = sorted_group.index.get_loc(highest_meas_rank)
+                            if type(rank_of_highest_meas) == slice:
+                                print('Something went wrong with MRR for', col, code)
+                                continue
+
+                            rank_of_highest_meas += 1
                             reciprocal_rank_sum += 1 / rank_of_highest_meas
+
                         mean_reciprocal_rank = reciprocal_rank_sum / len(unique_groups)
                         df_out.loc[(meas, sp, col), 'mean_reciprocal_rank'] = mean_reciprocal_rank
                     
@@ -1888,27 +1896,17 @@ def get_stat_df(df, statistic, new_dir, preds=None):
                     else:
                         combinations['corr'].append(1)
                         combinations['corr'].append(1)
+                    #print(model1, model2)
+                    #print(new_dir) 
 
-                    if 'runtime_'+model1+new_dir in preds.columns or 'korpm' in model1.lower():
-                        if model1 != model2:
-                            if 'cartesian' in model1:
-                                runtime_cpu += preds['runtime_'+model1+new_dir].sum()
-                            elif 'korpm' in model1.lower():
-                                runtime_cpu += preds['runtime_'+'korpm'+new_dir].sum()
-                            else:
-                                runtime_gpu += preds['runtime_'+model1+new_dir].sum()
+                    if 'runtime_'+model1+new_dir in preds.columns:
+                        if 'cartesian' in model1 or 'korpm' in model1:
+                            runtime_cpu += preds['runtime_'+model1+new_dir].sum()
                         else:
-                            if 'cartesian' in model1:
-                                runtime_cpu += preds['runtime_'+model1+new_dir].sum()
-                            elif 'korpm' in model1.lower():
-                                runtime_cpu += preds['runtime_'+'korpm'+new_dir].sum()
-                            else:
-                                runtime_gpu += preds['runtime_'+model1+new_dir].sum() 
-                    if ('runtime_'+model2+new_dir in preds.columns or 'korpm' in model2.lower()) and model1 != model2:
-                        if 'cartesian' in model2:
+                            runtime_gpu += preds['runtime_'+model1+new_dir].sum() 
+                    if 'runtime_'+model2+new_dir in preds.columns and model1 != model2:
+                        if 'cartesian' in model2 or 'korpm' in model2:
                             runtime_cpu += preds['runtime_'+model2+new_dir].sum()
-                        elif 'korpm' in model2.lower():
-                            runtime_cpu += preds['runtime_'+'korpm'+new_dir].sum()
                         else:
                             runtime_gpu += preds['runtime_'+model2+new_dir].sum()
 

@@ -33,7 +33,7 @@ def main(args):
 
     data = data_utils.MSA_processing(
             MSA_location=a_file,
-            theta=args.theta,
+            theta=float(args.theta),
             use_weights=True,
             weights_location=args.output_folder + os.path.basename(a_file).replace('a3m', 'npy')
     )
