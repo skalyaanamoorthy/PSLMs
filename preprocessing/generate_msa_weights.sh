@@ -18,19 +18,19 @@ code=${strarr[1]}; echo $code
 chain=${strarr[2]}; echo $chain
 folder=$code"_"$chain
 
-msa_file='./msas_fireprot_2024/'$code'_MSA.a2m'
+msa_file='./msas_fireprot_2024/'$folder'_MSA.a2m'
 
-viral=${strarr[-2]}
-echo $viral
+origin=${strarr[-1]}
+echo $origin
 
-if [ "$viral" = "True" ]; then
+if [ "$origin" = "Viruses" ]; then
     theta=0.01
 else
     theta=0.2
 fi
 
 echo "theta: $theta"
-file="${code}_MSA_${theta}.npy"
+file="${folder}_MSA_${theta}.npy"
 
 if [ ! -f "./msa_weights/${file}" ]; then
         python preprocessing/generate_msa_weights.py --msa_file $msa_file -o ./msa_weights/ --tranception_loc ~/scratch/software/Tranception/ --theta $theta

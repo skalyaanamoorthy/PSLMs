@@ -10,7 +10,7 @@ echo $dir_path
 echo "rsync $mapped_loc $dest/data/preprocessed/$m1"
 rsync -vv $mapped_loc $dest/data/preprocessed/$m1
 rsync -vv $mapped_loc $dest/data/inference/"${filename}_preds.csv"
-rsync -vv $dir_path/sequences/fasta_up/* $dest/sequences/fasta_up/ 
-rsync -vv $dir_path/structures/* $dest/structures/
-rsync -vv $dir_path/DMS_Tranception/* $dest/DMS_Tranception/
-rsync -vv $dir_path/DMS_MSA/* $dest/DMS_MSA/
+rsync -rvv $dir_path/sequences $dest 
+rsync -vv $dir_path/structures $dest
+rsync -vv $dir_path/DMS_Tranception $dest
+rsync -vv $dir_path/DMS_MSA $dest
