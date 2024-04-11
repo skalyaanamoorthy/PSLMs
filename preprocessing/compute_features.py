@@ -386,8 +386,7 @@ def extract_features(database_loc, path):
         # get the structure and target chain where the mutation is
         pdb_file = group['pdb_file'].head(1).item()
         target_chain_id = group['chain'].head(1).item()
-        alignment_file = group['msa_file'].head(1).item()
-        print(alignment_file)
+        alignment_file = group['reduced_msa_file'].head(1).item()
 
         # parse the structure and get its high-level model object
         structure = PDBParser().get_structure('PDB_ID', pdb_file)
@@ -566,10 +565,6 @@ if __name__=='__main__':
         args.db_loc, args.output_root)
 
     feat_2 = db.join(feat, how='left')
-    # sequence will be offset for FireProt because DSSP uses structures
-    #if 'fireprot' in args.db_loc.lower():
-    #    mask = feat_2['offset_up'].isna()
-    #    feat_2.loc[~mask, 'position'] = feat_2.loc[~mask, 'position'] - feat_2.loc[~mask, 'offset_up']
 
     # cysteines in disulfide bonds have unusual names
     dssp.loc[dssp['wild_type'].isin(['a','b']), 'wild_type'] = 'C'
@@ -577,13 +572,6 @@ if __name__=='__main__':
 
     # combine with DSSP information (SASA and secondary structure)
     out = feat_2.merge(dssp, on=['code', 'wild_type', 'position'], how='left')
-
-    # undo offset
-    #if 'fireprot' in args.db_loc.lower():
-    #    # First, select rows where 'offset_up' is not NaN
-    #    mask = ~out['offset_up'].isna()
-    #    # Then, update 'position' for these rows
-    #    out.loc[mask, 'position'] = out.loc[mask].apply(lambda row: row['position'] - row['offset_up'], axis=1)
 
     fname = os.path.basename(args.db_loc)
     outloc = os.path.join(args.output_root, 'data', 'features', fname.replace('_mapped.csv', '_mapped_feats.csv'))

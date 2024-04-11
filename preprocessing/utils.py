@@ -39,8 +39,8 @@ def download_assembly(code, chain, BIO_ASSEMBLIES_DIR):
     if not os.path.exists(prot_path):
         print(f'Downloading {code} biological assembly')
         try:
-            # for some reason this is the one bio assembly that doesn't exist
-            # so use monomer instead
+            #these bio assemblies don't exist or cause issues
+            # use monomer instead
             if code in ['1W4E', '1E0L', '1GYZ', '1H92', '1QLY', '1QM0',
                         '1URF', '1V1C', '1W4F', '1W4G', '1W4H', '2WNM']:
                 urllib.request.urlretrieve(
@@ -189,10 +189,10 @@ def repair_pdb(pdb_file, output_file):
     if filename[:4] in ['1G3P', '1IR3', '4HE7']:
         return
     # the other chain in these structures is DNA, causing errors
-    if filename[:4] in ['1AZP', '1BNZ', '1C8C']:
-        mdl = complete_pdb(env, pdb_file, model_segment=('1:A', 'LAST:A'))
-    if filename[:4] == '1R2Y':
-        mdl = complete_pdb(env, pdb_file, model_segment=('2:A', 'LAST:A'))
+    #if filename[:4] in ['1AZP', '1BNZ', '1C8C']:
+    #    mdl = complete_pdb(env, pdb_file, model_segment=('1:A', 'LAST:A'))
+    #if filename[:4] == '1R2Y':
+    #    mdl = complete_pdb(env, pdb_file, model_segment=('2:A', 'LAST:A'))
     # usually nothing is missing, so the structure is unchanged
     else:
         mdl = complete_pdb(env, pdb_file)
@@ -253,6 +253,9 @@ def extract_structure(code, chain, d, prot_path, prot_file,
                 if chn == target_chain:
                     new_idx += 1
                     chn = chain_names[new_idx]
+                continue
+            # remove DNA (deoxynucleotides)
+            if line[18:20] in ['DA', 'DT', 'DC', 'DG']:
                 continue
             # don't output this
             elif line[0:6] == 'ENDMDL':

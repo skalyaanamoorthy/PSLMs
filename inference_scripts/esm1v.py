@@ -52,16 +52,20 @@ def score_sequences(args):
                                 token_probs = torch.log_softmax(
                                     model(batch_tokens_masked.cuda())["logits"], dim=-1
                                 )
-                            #print(token_probs.shape)
-                            assert sequence[idx] == wt
+                                
+                            try:
+                                assert sequence[idx] == wt
+                            except:
+                                print('Warning: input sequence does not match designated wild-type. ', code, wt, pos, mt)
 
                             wt_encoded, mt_encoded = alphabet.get_idx(wt), alphabet.get_idx(mt)
                             score = token_probs[0, 1 + idx, mt_encoded] - token_probs[0, 1 + idx, wt_encoded]
 
                             logps.at[uid, f'esm1v_{i+1}_dir'] = score.item()
                             logps.at[uid, f'runtime_esm1v_{i+1}_dir'] = time.time() - start
-                        except:
-                            print(code, wt, pos, mt)
+
+                        except Exception as e:
+                            print(code, wt, pos, mt, e)
                             logps.at[uid, f'esm1v_{i+1}_dir'] = np.nan
                             logps.at[uid, f'runtime_esm1v_{i+1}_dir'] = np.nan
                         pbar.update(1)

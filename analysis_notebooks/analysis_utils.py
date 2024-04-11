@@ -98,6 +98,7 @@ remap_names = {
     'ddG': 'ΔΔG label', 
     'dTm': 'ΔTm label', 
     }
+#    'random_1': 'Gaussian Noise',
 
 # predictions will have dir in their name to specify direct mutation
 remap_names_2 = {f"{key}_dir": value for key, value in remap_names.items()}
@@ -831,7 +832,7 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
         dbr[f'runtime_{score_name_2}']=0
 
     melted = df.melt(id_vars=['uid'], value_vars=measurements).dropna().rename({'variable':'type', 'value':'measurement'}, axis=1)
-    df = melted.set_index('uid').join(df[['uid', 'code', 'ProTherm', score_name, score_name_2]].set_index('uid'))
+    df = melted.set_index('uid').join(df[['uid', 'code', 'marker', score_name, score_name_2]].set_index('uid'))
     if runtime and score_name not in measurements + ['random_dir']:
         dbr = melted.set_index('uid').join(dbr[[f'runtime_{score_name}', f'runtime_{score_name_2}', 'code']])
 
@@ -840,19 +841,19 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
         fig, axs = plt.subplots(2, 2, figsize=(15, 15))
         fig.suptitle(score_name)
 
-    g = df[['code', 'type', 'ProTherm', score_name, score_name_2, 'measurement']].dropna()
+    g = df[['code', 'type', 'marker', score_name, score_name_2, 'measurement']].dropna()
     g[f'{score_name} + {coeff2} * {score_name_2}'] = g[score_name] + coeff2 * g[score_name_2]
 
     if group:   
         if stat == 'spearman':
             i = pd.DataFrame()
-            for (code, t, p), group in g.groupby(['code', 'type', 'ProTherm']):
+            for (code, t, p), group in g.groupby(['code', 'type', 'marker']):
                 if len(group) > 1 and not all(group['measurement']==group['measurement'][0]):
                     ndcg1, _ = spearmanr(group['measurement'], group[score_name])
                     ndcg2, _ = spearmanr(group['measurement'], group[score_name_2])
                     tmp = pd.DataFrame([code, len(group), t, ndcg1, ndcg2, p]).T
                     i = pd.concat([i, tmp])
-            i.columns=['code', 'obs', 'type', score_name, score_name_2, 'ProTherm']
+            i.columns=['code', 'obs', 'type', score_name, score_name_2, 'marker']
             i = i.set_index(['code', 'obs', 'type'])
             ungrouped = pd.DataFrame()
             for t, group in g.groupby('type'):
@@ -864,13 +865,13 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
             ungrouped = ungrouped.set_index('type')
         if stat == 'pearson':
             i = pd.DataFrame()
-            for (code, t, p), group in g.groupby(['code', 'type', 'ProTherm']):
+            for (code, t, p), group in g.groupby(['code', 'type', 'marker']):
                 if len(group) > 1 and not all(group['measurement']==group['measurement'][0]):
                     ndcg1, _ = pearsonr(group['measurement'], group[score_name])
                     ndcg2, _ = pearsonr(group['measurement'], group[score_name_2])
                     tmp = pd.DataFrame([code, len(group), t, ndcg1, ndcg2, p]).T
                     i = pd.concat([i, tmp])
-            i.columns=['code', 'obs', 'type', score_name, score_name_2, 'ProTherm']
+            i.columns=['code', 'obs', 'type', score_name, score_name_2, 'marker']
             i = i.set_index(['code', 'obs', 'type'])
             ungrouped = pd.DataFrame()
             for t, group in g.groupby('type'):
@@ -882,13 +883,13 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
             ungrouped = ungrouped.set_index('type')
         elif stat == 'ndcg':
             i = pd.DataFrame()
-            for (code, t, p), group in g.groupby(['code', 'type', 'ProTherm']):
+            for (code, t, p), group in g.groupby(['code', 'type', 'marker']):
                 if len(group) > 1 and not all(group['measurement']==group['measurement'][0]):
                     ndcg1 = compute_ndcg(group, score_name, 'measurement')
                     ndcg2 = compute_ndcg(group, score_name_2, 'measurement')
                     tmp = pd.DataFrame([code, len(group), t, ndcg1, ndcg2, p]).T
                     i = pd.concat([i, tmp])
-            i.columns=['code', 'obs', 'type', score_name, score_name_2, 'ProTherm']
+            i.columns=['code', 'obs', 'type', score_name, score_name_2, 'marker']
             i = i.set_index(['code', 'obs', 'type'])
             ungrouped = pd.DataFrame()
             for t, group in g.groupby('type'):
@@ -934,12 +935,14 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
         axs[0,0].set_xlim((-1, 1))
         sns.scatterplot(ax=axs[1,1], data=g, x=score_name, y='measurement', hue='type', alpha=0.3)
         g = sns.jointplot(data=data, x=score_name_2, y=score_name, hue='type', kind='hist', marginal_kws=dict(bins=20), joint_kws=dict(alpha=0), height=10)
+        min_size = data['obs'].min() * 5
+        max_size = data['obs'].max() * 5
         for code, row in data.reset_index().iterrows():
-            if (row['obs'] > 1):# and (row['code'] not in ('1RTB', '1BVC', '1RN1', '1BNI', '1BPI', '1HZ6', '1OTR', '2O9P', '1AJ3', '3VUB', '1LZ1')):# \
+            if (row['obs'] > min_obs):# and (row['code'] not in ('1RTB', '1BVC', '1RN1', '1BNI', '1BPI', '1HZ6', '1OTR', '2O9P', '1AJ3', '3VUB', '1LZ1')):# \
             #if row['code'] in ['4E5K', '3D2A', '1ZNJ', '1WQ5', '1UHG', '1TUP', '1STN', '1QLP', '1PGA']:
                 g.ax_joint.text(row[score_name_2]-0.01, row[score_name]-0.01, f"{row['code']}:{row['obs']}", size=8)
-        ax = sns.scatterplot(data=data, x=score_name_2, y=score_name, hue='type', size='obs', style='ProTherm', sizes=(2,937), ax=g.ax_joint, alpha=0.4,
-                            markers={True: "s", False: "o"})
+        ax = sns.scatterplot(data=data, x=score_name_2, y=score_name, hue='type', size='obs', style='marker', sizes=(min_size,max_size), ax=g.ax_joint, alpha=0.4)#,
+                            #markers={True: "s", False: "o"})
         small = np.array(i[[score_name_2, score_name]].dropna()).min().min()
         big = np.array(data[[score_name_2, score_name]].dropna()).max().max()
         sns.lineplot(data=pd.DataFrame({'x': np.arange(small, big, 0.01), 'y': np.arange(small, big, 0.01)}), x='x', y='y', ax=g.ax_joint, color='red')
