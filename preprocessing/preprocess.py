@@ -256,11 +256,26 @@ def main(args):
             # to the context of interest and has no more than 90% identity
             # between sequences and no less than 75% coverage per sequence
             matching_files = glob.glob(
-                os.path.join(args.alignments, f'{code}_{chain}_MSA_full_cov75_id90.a3m')
+                os.path.join(
+                    args.alignments, 
+                    f'{code}_{chain}_MSA*_full_cov75_id90.a3m')
                 )
-            assert len(matching_files) <= 1, \
-                f"Expected one file, but found {len(matching_files)}"
-            if len(matching_files) == 0:
+
+            # if there are multiple files, it is probably because there are
+            # regular and extended versions. Use the extended one.
+            if len(matching_files) > 1:
+                for match in matching_files:
+                    if 'extended' in match:
+                        orig_msa = os.path.abspath(match)
+                        new_msa = os.path.join(internal_path, args.alignments, 
+                            os.path.basename(orig_msa))
+                        new_msa_full = os.path.join(
+                            internal_path, 
+                            args.alignments, 
+                            f'{code}_{chain}_MSA_extended.a3m' 
+                        )                             
+                #f"Expected one file, but found {len(matching_files)}"
+            elif len(matching_files) == 0:
                 exp = "un" if code not in ["1DXX", "1JL9", "1TIT"] else ""
                 print(f'Did not find an MSA for {code}. This is {exp}expected')
                 missing_msas.append(code)

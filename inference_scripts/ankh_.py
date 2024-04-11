@@ -30,15 +30,15 @@ def score_sequences(args):
         for code, group in df2.groupby('code'):
             for uid, row in group.iterrows():
                 with torch.no_grad():
-                    if True:
+                    try:
                         pos = row['position']
                         wt = row['wild_type']
                         mt = row['mutation']
                         ou = row['offset_up']
                         ws = row['window_start']
                         sequence = row['uniprot_seq']#[ws:ws+1022]
-                        if code == '1TIT':
-                            sequence = row['uniprot_seq'][ws:ws+1022]
+                        #if code == '1TIT':
+                        #    sequence = row['uniprot_seq'][ws:ws+1022]
                         oc = int(ou) * (0 if dataset == 'fireprot' else -1)  -1 #-ws
                         idx = pos + oc
 
@@ -70,10 +70,11 @@ def score_sequences(args):
                         score = masked_position_probabilities[amino_acids.index(mt)] - masked_position_probabilities[amino_acids.index(wt)]
                         logps.at[uid, f'ankh_dir'] = score.cpu().item()
                         logps.at[uid, f'runtime_ankh_dir'] = time.time() - start
-                    #except:
-                    #    print(code, wt, pos, mt)
-                    #    logps.at[uid, f'ankh_dir'] = np.nan
-                    #    logps.at[uid, f'runtime_ankh_dir'] = np.nan
+                        
+                    except Exception as e:
+                        print(code, wt, pos, mt, e)
+                        logps.at[uid, f'ankh_dir'] = np.nan
+                        logps.at[uid, f'runtime_ankh_dir'] = np.nan
                     pbar.update(1)
 
     df = pd.read_csv(args.output)

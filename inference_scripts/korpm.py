@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import sys
 import argparse
+import time
 
 def main(args):
     db = pd.read_csv(args.db_loc)
@@ -54,7 +55,7 @@ def main(args):
         db['korpm_mut'] = db['wild_type'] + db['chain'] + \
             db['position'].astype(str) + db['mutation']
         db['korpm_struct'] = db['code'] + '_' + db['chain']
-        db = db[['korpm_struct', 'korpm_mut']]  
+        db = db[['korpm_struct', 'korpm_mut']]
 
     db.to_csv(
         os.path.join(args.korpm_loc, f'{dataset}_korpm.csv'), 
@@ -63,7 +64,7 @@ def main(args):
 
     korpm_input = dataset+'_korpm.csv'
     korpm_output = dataset+'_korpm_preds.txt'
-
+    
     cmd = f"{os.path.join(args.korpm_loc, 'sbg', 'bin', 'korpm_gcc')}" \
           f" {os.path.join(args.korpm_loc, korpm_input)}" \
           f" --dir {args.structures_dir} --score_file " \
@@ -71,7 +72,11 @@ def main(args):
           f" -o {os.path.join(args.korpm_loc, korpm_output)}" 
 
     print(cmd)
+    start = time.time()
+
     os.system(cmd)
+
+    elapsed = time.time() - start
 
     korpm_preds = pd.read_csv(
         os.path.join(args.korpm_loc, f'{dataset}_korpm_preds.txt'), 
@@ -84,7 +89,7 @@ def main(args):
     korpm_preds = db.reset_index().merge(
         korpm_preds, on=['korpm_mut', 'korpm_struct']
         )
-    print(korpm_preds.head())
+    
     korpm_preds = korpm_preds.set_index('uid').drop_duplicates()
     korpm_preds = korpm_preds[[
         f'korpm{"_dir" if "inv" not in dataset else "_inv"}'
@@ -92,8 +97,13 @@ def main(args):
 
     korpm_preds.index.name = 'uid'
     preds_db = pd.read_csv(args.output, index_col=0)
-    if f'korpm{"_dir" if "inv" not in dataset else "_inv"}' in preds_db.columns:
-        preds_db = preds_db.drop(f'korpm{"_dir" if "inv" not in dataset else "_inv"}', axis=1)
+    for i in ['runtime_korpm_dir', 'korpm_dir', 'runtime_korpm', 'korpm']:
+        if i in preds_db.columns:
+            preds_db = preds_db.drop(i, axis=1)
+
+    # approximate per-mutant runtime
+    korpm_preds['runtime_korpm_dir'] = elapsed / len(preds_db)
+
     preds_db = preds_db.join(korpm_preds)
     preds_db.to_csv(args.output)
 

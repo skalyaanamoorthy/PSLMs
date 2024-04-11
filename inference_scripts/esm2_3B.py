@@ -47,9 +47,9 @@ def score_sequences(args):
                             oc = -1
                         else:
                             oc = -ou -1
-                        if code == '1TIT':
-                            sequence = row['uniprot_seq'][ws:ws+1023]
-                            oc -= ws
+                        #if code == '1TIT':
+                        #    sequence = row['uniprot_seq'][ws:ws+1023]
+                        #    oc -= ws
                         idx = pos + oc
 
                         start = time.time()
