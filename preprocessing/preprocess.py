@@ -158,7 +158,8 @@ def main(args):
             assert c in db.columns
     
     if sym:
-        db['uid'] = db['structure'] + "_" + db['position'].astype(str) + db['mutation']
+        db['uid'] = db['structure'] + "_" + \
+            db['position'].astype(str) + db['mutation']
         grouper = ['code', 'structure', 'chain']
     else:
         db['uid'] = db['code']+'_'+db['position'].astype(str)+db['mutation']
@@ -182,6 +183,16 @@ def main(args):
             chain = wrong_chains[code]
         if struct in wrong_chains and sym:
             chain = wrong_chains[struct]
+
+        wt_chain = chain
+        # 1ZNJ has two chains that share the same MSA
+        if code =='1ZNJ':
+            wt_chain = 'A'
+        # Ssym will use mutant chain unless this correction is used
+        if sym:
+            wt_chain = 'A'
+            if code == '1RN1':
+                wt_chain = 'C'
 
         print(code, struct, chain)
         
@@ -258,7 +269,7 @@ def main(args):
             matching_files = glob.glob(
                 os.path.join(
                     args.alignments, 
-                    f'{code}_{chain}_MSA*_full_cov75_id90.a3m')
+                    f'{code}_{wt_chain}_MSA*_full_cov75_id90.a3m')
                 )
 
             # if there are multiple files, it is probably because there are
@@ -272,9 +283,8 @@ def main(args):
                         new_msa_full = os.path.join(
                             internal_path, 
                             args.alignments, 
-                            f'{code}_{chain}_MSA_extended.a3m' 
+                            f'{code}_{wt_chain}_MSA_extended.a3m' 
                         )                             
-                #f"Expected one file, but found {len(matching_files)}"
             elif len(matching_files) == 0:
                 exp = "un" if code not in ["1DXX", "1JL9", "1TIT"] else ""
                 print(f'Did not find an MSA for {code}. This is {exp}expected')
@@ -286,10 +296,8 @@ def main(args):
                 new_msa = os.path.join(internal_path, args.alignments, 
                     os.path.basename(orig_msa))
                 new_msa_full = os.path.join(
-                    internal_path, args.alignments, f'{code}_{chain}_MSA.a3m' 
+                    internal_path, args.alignments, f'{code}_{wt_chain}_MSA.a3m' 
                 )     
-
-            #print(os.path.join(args.weights, f'{code}_*.npy'))
             matching_weights = glob.glob(
                 os.path.join(args.weights, f'{code}_*.npy')
                 )
@@ -501,7 +509,7 @@ def main(args):
         grouped['code'].isin(missing_weights)].groupby(
         ['code', 'chain']).first()['index'].astype(str)
 
-    print('Missing MSAs for', missing_msas)
+    print('Missing MSAs for', sorted(list(set(missing_msas))))
     print('Missing MSA indices:')
     print(' '.join(missing_indices))
 

@@ -136,7 +136,8 @@ def get_uniprot(code, chain, SEQUENCES_DIR, uniprot_id=None):
 
     # UniProt sequence has incorrect residues for second half of protein
     # so just use the PDB sequence for searching
-    if code in ['1IV7', '1IV9']:
+    # for 1TIT and 1WIT, the UniProt sequences are too long
+    if code in ['1IV7', '1IV9', '1TIT', '1WIT']:
         uniprot_seq = None
 
     return uniprot_seq, accession, origin
