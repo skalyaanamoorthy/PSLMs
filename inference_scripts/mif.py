@@ -22,7 +22,7 @@ def assert_diff_by_one(str1, str2):
 
 def score_backbones(args):
     if args.model not in ['mif', 'mifst']:
-        raise ValueError("Valid models ars 'mif' and 'mifst'.")
+        raise ValueError("Valid models are 'mif' and 'mifst'.")
 
     print('Loading model...')
     model, collater = load_model_and_alphabet(args.model)

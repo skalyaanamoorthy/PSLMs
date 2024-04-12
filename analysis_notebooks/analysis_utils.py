@@ -506,6 +506,128 @@ def make_bar_chart(df, models, title, figsize=(12, 12), xlim=(-1, 1)):
     plt.show()
 
 
+def make_scatter_chart(df, models, title, figsize=(12, 8), ylim=(-1, 1), use_dual_y_axis=False, right_y_lim=(-1, 1)):
+    df['model'] = df['model'].str.replace('_dir', '', regex=False)
+    df = df[df['model'].isin(models)]
+    
+    mean_cols = [col for col in df.columns if col.endswith('mean')]
+    std_cols = [col for col in df.columns if col.endswith('stdev')]
+    
+    symbols = ['o', '^', 's', 'D', '*']  # Example symbols for different models
+    color_dict = get_color_mapping(df, 'model')  # Assuming this function exists
+    
+    plt.figure(figsize=figsize, dpi=300)
+    ax = plt.gca()
+    
+    if use_dual_y_axis:
+        ax2 = ax.twinx()
+        ax2.set_ylim(right_y_lim)
+        ax2.set_ylabel('Scale for ' + mean_cols[-1][:-5], color='tab:red', rotation=270, labelpad=20)
+
+    n_stats = len(mean_cols)
+    width_per_stat = 1.0 / n_stats  # Calculate the width per statistic
+    
+    # Define offsets to avoid overlap
+    offsets = np.linspace(-width_per_stat * 2.5, width_per_stat * 2.5, num=len(models))
+
+    for i, model in enumerate(models):
+        model_data = df[df['model'] == model]
+        if model_data.empty:
+            continue
+        
+        symbol = symbols[i % len(symbols)]  # Use same symbol for each model across all statistics
+        for j, mean_col in enumerate(mean_cols):
+            std_col = std_cols[j]  # Corresponding std dev column
+            mean_values = model_data[mean_col].values
+            std_values = model_data[std_col].values
+            x_positions = j + offsets[i]  # Adjust position to avoid overlap
+            
+            if use_dual_y_axis and j == len(mean_cols) - 1:
+                # Plot on secondary axis for the last column
+                ax2.errorbar(x_positions, mean_values, yerr=std_values, fmt=symbol,
+                             capsize=3, color=color_dict.get(model, 'black'), label=model if j == 0 else "_nolegend_")
+            else:
+                # Plot on primary axis
+                ax.errorbar(x_positions, mean_values, yerr=std_values, fmt=symbol,
+                            capsize=3, color=color_dict.get(model, 'black'), label=model if j == 0 else "_nolegend_")
+    
+    # Correct the ticks and dividers
+    ax.set_xticks(np.arange(n_stats))
+    ax.set_xticklabels([col[:-5] for col in mean_cols], rotation=45, ha="right")
+    ax.set_xlim(-0.5, n_stats-0.5)
+    ax.set_ylim(ylim)
+    ax.legend(title='Model', bbox_to_anchor=(1.15, 1), loc='upper left')
+    ax.set_ylabel('Score')
+    
+    # Draw zero lines correctly confined to each column
+    for j in range(n_stats):
+        if use_dual_y_axis and j == n_stats - 1:
+            ax2.axhline(y=0, xmin=j/n_stats, xmax=(j+1)/n_stats, linestyle='--', color='red', zorder=1)  # Secondary axis zero line
+        else:
+            ax.axvline(x=j + 0.5, linestyle='--', color='grey', zorder=0)  # Draw dividers
+            ax.axhline(y=0, xmin=j/n_stats, xmax=(j+1)/n_stats, linestyle='--', color='red', zorder=1)  # Red line within each column
+
+    plt.xlabel('Statistic')
+    #plt.ylabel('Score', rotation=270, color='black')
+    plt.title(f'Performance on {title}')
+
+
+def make_scatter_chart_colored(df, models, title, figsize=(12, 8), ylim=(-1, 1)):
+    df['model'] = df['model'].str.replace('_dir', '', regex=False)
+    df = df[df['model'].isin(models)]
+    
+    mean_cols = [col for col in df.columns if col.endswith('mean')]
+    std_cols = [col for col in df.columns if col.endswith('stdev')]
+    
+    symbols = ['o', '^', 's', 'D', '*']  # Different symbols for different statistics
+    color_dict = get_color_mapping(df, 'model')
+    
+    plt.figure(figsize=figsize, dpi=300)
+    ax = plt.gca()
+    
+    # Plot colors for each model's section
+    model_positions = np.arange(len(models))
+    for i, model in enumerate(models):
+        color = color_dict.get(model, 'grey')
+        ax.axvspan(i - 0.5, i + 0.5, color=color, alpha=0.2, zorder=0)
+    
+    offset_factor = 0.2  # Offset factor to space out statistics within a model's section
+    total_width = 0.8  # Total width to distribute the points within
+
+    for j, (mean_col, std_col) in enumerate(zip(mean_cols, std_cols)):
+        for i, model in enumerate(models):
+            model_data = df[df['model'] == model]
+            if model_data.empty:
+                continue
+            
+            mean_values = model_data[mean_col].values
+            std_values = model_data[std_col].values
+            
+            # Calculate offset for each statistic to prevent overlap
+            offset = (j - (len(mean_cols) - 1) / 2) * offset_factor
+            
+            # Plot each model's statistic with error bars, adjusting y-positions for clarity
+            ax.errorbar([i + offset] * len(mean_values), mean_values, yerr=std_values, fmt=symbols[j % len(symbols)],
+                        capsize=3, color='black', label=mean_col if i == 0 and j == 0 else "_nolegend_")
+    
+    # Set models as x-ticks
+    ax.set_xticks(model_positions)
+    ax.set_xticklabels(models, rotation=45, ha="right")
+    
+    # Create custom legend for statistics
+    legend_elements = [plt.Line2D([0], [0], marker=symbols[i], color='w', markerfacecolor='black', markersize=10, label=mean_cols[i]) for i in range(len(mean_cols))]
+    ax.legend(handles=legend_elements, title='Statistics', bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    #plt.xlim(xlim)
+    plt.xlabel('Model')
+    plt.ylabel('Value')
+    plt.title(f'Performance on {title}')
+    
+    plt.tight_layout()
+    plt.show()
+
+
+
 def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'random_dir'], measurements=('dTm', 'ddG'), plots=('auppc', 'aumsc'), points=[10], spacing=0.02, text_offset=(-20, -0.07)):
 
     def annotate_points(ax, data, x_col, y_col, hue_col, x_values, text_offset=(0, 0), spacing=0.02):
@@ -1439,7 +1561,7 @@ def compute_stats(
                             top_1_stab += group.sort_values(col, ascending=False)[meas].head(1).item()
                         df_out.loc[(meas,sp,col), 'mean_t1s'] = top_1_stab / len(pred_df_cont[grouper].unique())
 
-                    # inverse of the assigned rank of the number one most stable protein
+                    # inverse of the assigned rank of the number one most stable protein per group
                     if ('mean_reciprocal_rank' in stats) or (stats == ()): 
                         reciprocal_rank_sum = 0
                         unique_groups = pred_df_cont[grouper].unique()
@@ -3404,3 +3526,77 @@ def custom_recursive_feature_addition(df_train, dfs_test, cols, target, model, l
     plt.show()
 
     return test_scores, weights_df, dfs_test
+
+
+def compare_distributions_violin(df1, df2, shared_columns=None, source1='Q3421', source2='S461', label_adjust=0.2):
+    remap_names = {'delta_chg_dir': 'Δ charge', 'delta_vol_dir': 'Δ volume', 'hbonds': 'wt hydrogen bonds', 
+                    'multimer': 'chains in assembly', 'neff': 'n effective sequences', 'b_factor': 'beta factor',
+                    'rel_ASA_dir': 'SASA', 'delta_kdh_dir': 'Δ hydrophobicity', 'ddG': 'ΔΔG', 'structure_length': 'n residues', 
+                    'completeness_score': 'alignment completeness'}
+
+    if shared_columns is None:
+        # Identify shared columns
+        shared_columns = set(df1.columns).intersection(df2.columns)
+        print(shared_columns)
+
+    # Exclude boolean columns
+    shared_columns = [col for col in shared_columns if df1[col].dtype != 'bool' and df2[col].dtype != 'bool']
+
+    # Create a combined dataframe with an extra column to indicate the source dataframe
+    df1_copy = df1[shared_columns].copy()
+    df1_copy['source'] = source1
+
+    df2_copy = df2[shared_columns].copy()
+    df2_copy['source'] = source2
+
+    combined_df = pd.concat([df1_copy, df2_copy])
+
+    # Apply Min-Max Scaling
+    scaler = MinMaxScaler()
+    combined_df[shared_columns] = scaler.fit_transform(combined_df[shared_columns])
+
+    # Melt the dataframe to long format for plotting
+    melted_df = combined_df.melt(id_vars='source', value_vars=shared_columns)
+
+    # Plot a violin plot for each shared column
+    plt.figure(figsize=(20, 10))
+    ax = sns.violinplot(x='variable', y='value', hue='source', split=True, data=melted_df, bw=0.1, inner='quart')
+
+    for i, col in enumerate(shared_columns):
+        # Calculate medians before transformation
+        median_df1 = df1[col].median()
+        median_df2 = df2[col].median()
+
+        # Normalize column
+        combined_col = pd.concat([df1[[col]], df2[[col]]])
+        combined_col_scaled = scaler.fit_transform(combined_col)
+
+        # Create DataFrame for violin plot
+        violin_df = pd.DataFrame({
+            'Column': [i]*len(combined_col),  # replace column name with numeric value
+            'Value': combined_col_scaled.flatten(),
+            'Source': ['df1']*len(df1) + ['df2']*len(df2)
+        })
+
+        # Plot violin
+        #sns.violinplot(x='Column', y='Value', hue='Source', data=violin_df, split=True, inner=None, ax=ax)
+
+        # Plot median markers
+        median_df1_scaled = scaler.transform([[median_df1]])[0, 0]
+        median_df2_scaled = scaler.transform([[median_df2]])[0, 0]
+        plt.plot([i-0.15-label_adjust, i], [median_df1_scaled, median_df1_scaled], color='blue', linestyle='dashed')
+        plt.plot([i, i+0.25+label_adjust], [median_df2_scaled, median_df2_scaled], color='red', linestyle='dashed')
+
+        # Annotate median markers
+        ax.text(i-0.3-label_adjust, median_df1_scaled, f'{median_df1:.2f}', color='blue', va='center', fontsize=10)
+        ax.text(i+0.3+label_adjust, median_df2_scaled, f'{median_df2:.2f}', color='red', va='center', fontsize=10)
+
+    remapped_x = [remap_names[tick.get_text()] if tick.get_text() in remap_names.keys() else tick.get_text() for tick in ax.get_xticklabels()]
+    ax.set_xticklabels(remapped_x)
+
+    plt.title(f'Feature Distributions for {source1} and {source2}', fontsize=30)
+    plt.xticks(rotation=90, fontsize=16)
+    plt.yticks(rotation=90, fontsize=16)
+    plt.xlabel('Feature', fontsize=24)
+    plt.ylabel('Normalized Value', fontsize=24)
+    plt.show()
