@@ -193,7 +193,7 @@ Then, you can run any of the inference scripts in inference_scripts. You can use
 
 `cp data/preprocessed/q3421_mapped.csv data/inference/q3421_mapped_preds_copy.csv`
 
-`python inference_scripts/mpnn.py --db_location 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds_copy.csv' --mpnn_loc ~/software/ProteinMPNN --noise '20'`
+`python inference_scripts/mpnn.py --db_loc 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds_copy.csv' --mpnn_loc ~/software/ProteinMPNN --noise '20'`
 
 **NOTE: Due to the use of relative paths in the _mapped.csv, you must call inference scripts from the root of the repository! Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
 
