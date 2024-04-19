@@ -126,7 +126,7 @@ Tranception:
 Follow the instructions in the repo to get the Tranception_Large (parameters) binary and config. You do not need to the setup the conda environment.
 Again, you will need to specify the location of the repository (--tranception_loc) and the model weights (--checkpoint).
 
-KORPM:
+KORPM (note: statistical potential, not PSLM):
 
 Make sure to have Git LFS in order to obtain the potential maps used by KORPM, otherwise you can download the repository as a .zip and extract it.
 
