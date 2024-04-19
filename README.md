@@ -31,6 +31,10 @@ The notebooks draw from precomputed features, the original databases from their 
 
 We recommend demoing the more thoroughly documented and tidy analysis_notebooks/Q3421_analysis.ipynb . The expected outputs are shown below the cells. The expected runtimes are often included per-cell, for a total runtime of <5 minutes on a typical PC. To reduce the demo time, the number of bootstrapped replicates have been greatly reduced from those reported in the text. Additionally, the ensemble predictions step has been precomputed and is loaded from a file, but can be easily reproduced by uncommenting the relevant line(s).
 
+# Summary Diagram
+
+![](workflow.png)
+
 # Installation Guide
 
 Note: only general setup is required to demo code.
