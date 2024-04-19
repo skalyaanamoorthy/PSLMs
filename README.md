@@ -21,6 +21,7 @@ This repository is for facilitating access to and benchmarking self-supervised d
 * Git LFS (if examining or analyzing reported data, including re-running notebooks)
 * MMSeqs2 (if doing sequence clustering)
 * FATCAT (if doing structure clustering)
+* Rosetta (if doing biophysical stability prediction, used version 2019.21.60746)
 
 # Demo /  Instructions
 
