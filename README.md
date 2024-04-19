@@ -18,7 +18,9 @@ This repository is for facilitating access to and benchmarking self-supervised d
   * up to 128GB for preprocessing or inference involving MSAs
 * NVIDIA CUDA (tested v11) and CUDNN (if running inference)
 * HMMER (if generating MSAs)
-* Git LFS (if examining or analyzing reported data, including using Notebooks)
+* Git LFS (if examining or analyzing reported data, including re-running notebooks)
+* MMSeqs2 (if doing sequence clustering)
+* FATCAT (if doing structure clustering)
 
 # Demo /  Instructions
 
