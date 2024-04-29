@@ -50,7 +50,7 @@ RUN . /opt/venv/bin/activate && \
     pip install -r requirements_inference.txt --no-deps
 
 RUN wget https://salilab.org/modeller/10.5/modeller_10.5-1_amd64.deb && \
-    env KEY_MODELLER=MODELIRANJE dpkg -i modeller_10.5-1_amd64.deb
+    dpkg -i modeller_10.5-1_amd64.deb
 
 RUN chmod +x convenience_scripts/append_modeller_paths.sh && \
     ./convenience_scripts/append_modeller_paths.sh

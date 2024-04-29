@@ -66,14 +66,15 @@ remap_names = {
     'mpnn_sol_10_00': 'ProteinMPNN_sol 0.1', 
     'mpnn_sol_20_00': 'ProteinMPNN_sol 0.2', 
     'mpnn_sol_30_00': 'ProteinMPNN_sol 0.3', 
-    'tranception': 'Tranception', 
-    'tranception_weights': 'Tranception reweighted',
+    'tranception': 'Tranception (reduced)', 
+    'tranception_weights': 'Tranception',
     'tranception_original': 'Tranception_original',
     'tranception_reproduced': 'Tranception_reproduced',
     'tranception_target': 'Tranception_target',
     'esm1v_2': 'ESM-1V 2', 
     'msa_1': 'MSA-T 1', 
-    'korpm': 'KORPM', 
+    'korpm': 'KORPM',
+    'Evo': 'EvoEF',
     'msa_transformer_median': 'MSA-T median',
     'ankh': 'Ankh',
     'ensemble': 'Ensemble',
@@ -94,6 +95,14 @@ remap_names = {
     'q3421_pslm_rfa_3': 'Ensemble 3 Feats',
     'q3421_pslm_rfa_4': 'Ensemble 4 Feats',
     'q3421_pslm_rfa_5': 'Ensemble 5 Feats',
+    'q3421_pslm_rfa_6': 'Ensemble 6 Feats',
+    'q3421_pslm_rfa_7': 'Ensemble 7 Feats',
+    'K1566_pslm_rfa_2': 'Ensemble 2 Feats',
+    'K1566_pslm_rfa_3': 'Ensemble 3 Feats',
+    'K1566_pslm_rfa_4': 'Ensemble 4 Feats',
+    'K1566_pslm_rfa_5': 'Ensemble 5 Feats',
+    'K1566_pslm_rfa_6': 'Ensemble 6 Feats',
+    'K1566_pslm_rfa_7': 'Ensemble 7 Feats',
     'random': 'Gaussian Noise',
     'ddG': 'ΔΔG label', 
     'dTm': 'ΔTm label', 
@@ -102,6 +111,27 @@ remap_names = {
 
 # predictions will have dir in their name to specify direct mutation
 remap_names_2 = {f"{key}_dir": value for key, value in remap_names.items()}
+
+remap_cols = {  'auprc': 'AUPRC', 
+                'spearman': 'Spearman\'s ρ', 
+                'auppc': 'mean PPC', 
+                'aumsc': 'mean MSC', 
+                'weighted_ndcg': 'wNDCG', 
+                'ndcg': 'NDCG',
+                'weighted_spearman': 'wρ', 
+                'weighted_auprc': 'wAUPRC', 
+                'tp': 'True Positives', 
+                'sensitivity': 'Sensitivity', 
+                'mean_stabilization': 'Mean Stabilization',
+                'net_stabilization': 'Net Stabilization',
+                'mean_squared_error': 'MSE',
+                'accuracy': 'Accuracy', 
+                'mean_reciprocal_rank': 'MRR', 
+                'n': 'n', 
+                'MCC': 'MCC', 
+                'recall@k1.0': 'Recall @ k1',
+                'recall@k0.0': 'Recall @ k0'
+                }
 
 # check if these substrings are in the name of a model in order to assign colors
 evolutionary = ['tranception', 'msa_transformer', 'esm1v', 'msa', 'esm2', 'ankh']
@@ -153,7 +183,7 @@ def generate_palette(base_color):
             i = 1
             noisy_palette_hex.append(color)
             continue
-        noise = np.random.normal(0, 0.05, 3)
+        noise = np.random.normal(0, 0.06, 3)
         noisy_color = np.clip(np.array([n+c for n,c in zip(noise, color)]), 0, 1)
         #print(color, noise, noisy_color)
         #hex_color = '#{:02x}{:02x}{:02x}'.format(int(noisy_color[0]*255), int(noisy_color[1]*255), int(noisy_color[2]*255))
@@ -180,6 +210,7 @@ def get_color_mapping(data, column='variable'):
     palettes = {}
     color_mapping = {}
     for var in data[column].unique():
+        print(var)
         base_color = determine_base_color(var)
         if base_color in palettes.keys():
             palette = palettes[base_color]
@@ -190,6 +221,22 @@ def get_color_mapping(data, column='variable'):
         color_mapping[var] = assign_color(var, used_colors, palette)
         used_colors.add(color_mapping[var])
     return color_mapping
+
+def format_fixed_total_digits(number, total_digits=4):
+    try:
+        integer_part = int(number)  # Convert to integer to get the integer part
+        integer_digits = len(str(abs(integer_part)))  # Count digits in the integer part, ignore the minus sign if negative
+        decimal_places = total_digits - integer_digits  # Calculate the remaining digits for the decimal part
+
+        # Adjust for the decimal point itself
+        decimal_places = max(0, decimal_places - 1) if total_digits > integer_digits else 0
+    
+        # Create format string dynamically based on calculated decimal places
+        format_string = f"{{:.{decimal_places}f}}"
+        return format_string.format(number)
+    except (TypeError, ValueError):
+        return number  # Return the original number if there's an error
+
 
 def bootstrap_by_grouper(dbf, n_bootstraps, grouper='code', drop=True, noise=0, target='ddG', duplicates=True):
     if grouper == 'code' and not 'code' in dbf.columns:
@@ -506,7 +553,7 @@ def make_bar_chart(df, models, title, figsize=(12, 12), xlim=(-1, 1)):
     plt.show()
 
 
-def make_scatter_chart(df, models, title, figsize=(12, 8), ylim=(-1, 1), use_dual_y_axis=False, right_y_lim=(-1, 1)):
+def make_scatter_chart(df, models, title, figsize=(12, 8), ylim=(-1, 1), use_dual_y_axis=False, right_y_lim=(-1, 1), sw=1):
     df['model'] = df['model'].str.replace('_dir', '', regex=False)
     df = df[df['model'].isin(models)]
     
@@ -514,6 +561,7 @@ def make_scatter_chart(df, models, title, figsize=(12, 8), ylim=(-1, 1), use_dua
     std_cols = [col for col in df.columns if col.endswith('stdev')]
     
     symbols = ['o', '^', 's', 'D', '*']  # Example symbols for different models
+
     color_dict = get_color_mapping(df, 'model')  # Assuming this function exists
     
     plt.figure(figsize=figsize, dpi=300)
@@ -522,13 +570,13 @@ def make_scatter_chart(df, models, title, figsize=(12, 8), ylim=(-1, 1), use_dua
     if use_dual_y_axis:
         ax2 = ax.twinx()
         ax2.set_ylim(right_y_lim)
-        ax2.set_ylabel('Scale for ' + mean_cols[-1][:-5], color='tab:red', rotation=270, labelpad=20)
+        ax2.set_ylabel('ΔΔG (kcal/mol x1000)', rotation=270, labelpad=20) # + mean_cols[-1][:-5]
 
     n_stats = len(mean_cols)
     width_per_stat = 1.0 / n_stats  # Calculate the width per statistic
     
     # Define offsets to avoid overlap
-    offsets = np.linspace(-width_per_stat * 2.5, width_per_stat * 2.5, num=len(models))
+    offsets = np.linspace(-width_per_stat * sw, width_per_stat * sw, num=len(models))
 
     for i, model in enumerate(models):
         model_data = df[df['model'] == model]
@@ -544,19 +592,19 @@ def make_scatter_chart(df, models, title, figsize=(12, 8), ylim=(-1, 1), use_dua
             
             if use_dual_y_axis and j == len(mean_cols) - 1:
                 # Plot on secondary axis for the last column
-                ax2.errorbar(x_positions, mean_values, yerr=std_values, fmt=symbol,
-                             capsize=3, color=color_dict.get(model, 'black'), label=model if j == 0 else "_nolegend_")
+                ax2.errorbar(x_positions, mean_values/1000, yerr=std_values/1000, fmt=symbol,
+                             capsize=3, color=color_dict.get(model, 'black'), label=remap_names.get(model, model) if j == 0 else "_nolegend_")
             else:
                 # Plot on primary axis
                 ax.errorbar(x_positions, mean_values, yerr=std_values, fmt=symbol,
-                            capsize=3, color=color_dict.get(model, 'black'), label=model if j == 0 else "_nolegend_")
+                            capsize=3, color=color_dict.get(model, 'black'), label=remap_names.get(model, model) if j == 0 else "_nolegend_")
     
     # Correct the ticks and dividers
     ax.set_xticks(np.arange(n_stats))
     ax.set_xticklabels([col[:-5] for col in mean_cols], rotation=45, ha="right")
     ax.set_xlim(-0.5, n_stats-0.5)
     ax.set_ylim(ylim)
-    ax.legend(title='Model', bbox_to_anchor=(1.15, 1), loc='upper left')
+    ax.legend(title='Model', bbox_to_anchor=(1.3, 1), loc='upper left')
     ax.set_ylabel('Score')
     
     # Draw zero lines correctly confined to each column
@@ -663,17 +711,17 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
 
     if len(plots) == 1:
         if len(measurements) == 1:
-            fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(8, 8), dpi=300)
+            fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(6, 6), dpi=300)
             ax_list = [axes]  
         else:
-            fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(16, 8), dpi=300)
+            fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), dpi=300)
             ax_list = [axes[0], axes[1]]        
     elif len(plots)==2:
         if len(measurements) == 1:
-            fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(16, 8), dpi=300)
+            fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), dpi=300)
             ax_list = [axes[0], axes[1]]
         else:
-            fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(16, 16), dpi=300)
+            fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 12), dpi=300)
             ax_list = [axes[0, 0], axes[1, 0], axes[0, 1], axes[1, 1]]
 
     d5 = rcv.reset_index()
@@ -924,7 +972,7 @@ def recovery_curves_2(rcv, models, percentile_labels, directions=['dir', 'inv'])
 
 
 def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bins=20, stat='spearman', runtime=False, 
-                 group=True, valid=False, out=True, plot=False, coeff2=0.2, meas='ddG', measurements=['ddG']):
+                 group=True, valid=False, out=True, plot=False, coeff2=0.2, meas='ddG', measurements=['ddG'], marker_name=None):
 
     font = {'size'   : 14}
     matplotlib.rc('font', **font)
@@ -954,28 +1002,28 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
         dbr[f'runtime_{score_name_2}']=0
 
     melted = df.melt(id_vars=['uid'], value_vars=measurements).dropna().rename({'variable':'type', 'value':'measurement'}, axis=1)
-    df = melted.set_index('uid').join(df[['uid', 'code', 'marker', score_name, score_name_2]].set_index('uid'))
+    df = melted.set_index('uid').join(df[['uid', 'code', marker_name, score_name, score_name_2]].set_index('uid'))
     if runtime and score_name not in measurements + ['random_dir']:
         dbr = melted.set_index('uid').join(dbr[[f'runtime_{score_name}', f'runtime_{score_name_2}', 'code']])
 
     #todo: match colours between plots, add legends, add measurement distribution
-    if plot:
-        fig, axs = plt.subplots(2, 2, figsize=(15, 15))
-        fig.suptitle(score_name)
+    #if plot:
+    #    fig, axs = plt.subplots(2, 2, figsize=(15, 15))
+    #    fig.suptitle(score_name)
 
-    g = df[['code', 'type', 'marker', score_name, score_name_2, 'measurement']].dropna()
+    g = df[['code', 'type', marker_name, score_name, score_name_2, 'measurement']].dropna()
     g[f'{score_name} + {coeff2} * {score_name_2}'] = g[score_name] + coeff2 * g[score_name_2]
 
     if group:   
         if stat == 'spearman':
             i = pd.DataFrame()
-            for (code, t, p), group in g.groupby(['code', 'type', 'marker']):
+            for (code, t, p), group in g.groupby(['code', 'type', marker_name]):
                 if len(group) > 1 and not all(group['measurement']==group['measurement'][0]):
                     ndcg1, _ = spearmanr(group['measurement'], group[score_name])
                     ndcg2, _ = spearmanr(group['measurement'], group[score_name_2])
                     tmp = pd.DataFrame([code, len(group), t, ndcg1, ndcg2, p]).T
                     i = pd.concat([i, tmp])
-            i.columns=['code', 'obs', 'type', score_name, score_name_2, 'marker']
+            i.columns=['code', 'obs', 'type', score_name, score_name_2, marker_name]
             i = i.set_index(['code', 'obs', 'type'])
             ungrouped = pd.DataFrame()
             for t, group in g.groupby('type'):
@@ -987,13 +1035,13 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
             ungrouped = ungrouped.set_index('type')
         if stat == 'pearson':
             i = pd.DataFrame()
-            for (code, t, p), group in g.groupby(['code', 'type', 'marker']):
+            for (code, t, p), group in g.groupby(['code', 'type', marker_name]):
                 if len(group) > 1 and not all(group['measurement']==group['measurement'][0]):
                     ndcg1, _ = pearsonr(group['measurement'], group[score_name])
                     ndcg2, _ = pearsonr(group['measurement'], group[score_name_2])
                     tmp = pd.DataFrame([code, len(group), t, ndcg1, ndcg2, p]).T
                     i = pd.concat([i, tmp])
-            i.columns=['code', 'obs', 'type', score_name, score_name_2, 'marker']
+            i.columns=['code', 'obs', 'type', score_name, score_name_2, marker_name]
             i = i.set_index(['code', 'obs', 'type'])
             ungrouped = pd.DataFrame()
             for t, group in g.groupby('type'):
@@ -1005,13 +1053,13 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
             ungrouped = ungrouped.set_index('type')
         elif stat == 'ndcg':
             i = pd.DataFrame()
-            for (code, t, p), group in g.groupby(['code', 'type', 'marker']):
+            for (code, t, p), group in g.groupby(['code', 'type', marker_name]):
                 if len(group) > 1 and not all(group['measurement']==group['measurement'][0]):
                     ndcg1 = compute_ndcg(group, score_name, 'measurement')
                     ndcg2 = compute_ndcg(group, score_name_2, 'measurement')
                     tmp = pd.DataFrame([code, len(group), t, ndcg1, ndcg2, p]).T
                     i = pd.concat([i, tmp])
-            i.columns=['code', 'obs', 'type', score_name, score_name_2, 'marker']
+            i.columns=['code', 'obs', 'type', score_name, score_name_2, marker_name]
             i = i.set_index(['code', 'obs', 'type'])
             ungrouped = pd.DataFrame()
             for t, group in g.groupby('type'):
@@ -1022,48 +1070,48 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
             ungrouped.columns=['obs', 'type', score_name, score_name_2]
             ungrouped = ungrouped.set_index('type')
 
-        if plot:
-            axs[0,0].set_title(f'{stat} to ground truth')
-            axs[0,1].set_title(f'distribution of predictions')
-            sns.histplot(ax=axs[0, 1], x=score_name, data=g[[score_name, 'type']].reset_index(drop=True), alpha=0.3, hue='type', bins=bins)
-            sns.histplot(ax=axs[1, 0], x='measurement', data=g[['measurement', 'type']].reset_index(drop=True), alpha=0.3, hue='type', bins=bins)
+        #if plot:
+        #    axs[0,0].set_title(f'{stat} to ground truth')
+        #    axs[0,1].set_title(f'distribution of predictions')
+        #    sns.histplot(ax=axs[0, 1], x=score_name, data=g[[score_name, 'type']].reset_index(drop=True), alpha=0.3, hue='type', bins=bins)
+        #    sns.histplot(ax=axs[1, 0], x='measurement', data=g[['measurement', 'type']].reset_index(drop=True), alpha=0.3, hue='type', bins=bins)
         if runtime and score_name not in measurements + ['random_dir']:
             runs = dbr[[f'runtime_{score_name}', f'runtime_{score_name_2}', 'code', 'type']].groupby(['code', 'type']).sum().reset_index()
 
-    else:
-        f = g.loc[g['type']=='ddG', [score_name, score_name_2, 'measurement']]
-        n = len(f)
-        i = f.corr('spearman')[['measurement', score_name]].drop('measurement').T
-        i['obs'] = n
-        if score_name_2 == 'tmp':
-            f = f.drop('tmp', axis=1)
-        if plot:
-            sns.scatterplot(ax=axs[0,0], data=f, x=score_name, y=score_name_2, hue='measurement', alpha=0.3, palette='coolwarm_r')
-            sns.scatterplot(ax=axs[0,1], data=f, x=score_name_2, y='measurement', hue=score_name, alpha=0.3, palette='coolwarm_r')
-            sns.scatterplot(ax=axs[1,0], data=f, x=score_name, y='measurement', hue=score_name_2, alpha=0.3, palette='coolwarm_r')
-            sns.scatterplot(ax=axs[1,1], data=f, x=f'{score_name} + {coeff2} * {score_name_2}', y='measurement', alpha=0.3, legend=None)
-            plt.tight_layout(pad=1, w_pad=0.5, h_pad=1.0)
-            
-        return i
+    #else:
+    #    f = g.loc[g['type']=='ddG', [score_name, score_name_2, 'measurement']]
+    #    n = len(f)
+    #    i = f.corr('spearman')[['measurement', score_name]].drop('measurement').T
+    #    i['obs'] = n
+    #    if score_name_2 == 'tmp':
+    #        f = f.drop('tmp', axis=1)
+    #    if plot:
+    #        sns.scatterplot(ax=axs[0,0], data=f, x=score_name, y=score_name_2, hue='measurement', alpha=0.3, palette='coolwarm_r')
+    #        sns.scatterplot(ax=axs[0,1], data=f, x=score_name_2, y='measurement', hue=score_name, alpha=0.3, palette='coolwarm_r')
+    #        sns.scatterplot(ax=axs[1,0], data=f, x=score_name, y='measurement', hue=score_name_2, alpha=0.3, palette='coolwarm_r')
+    #        sns.scatterplot(ax=axs[1,1], data=f, x=f'{score_name} + {coeff2} * {score_name_2}', y='measurement', alpha=0.3, legend=None)
+    #        plt.tight_layout(pad=1, w_pad=0.5, h_pad=1.0)
+    #        
+    #    return i
         
     if plot:
         data=i.reset_index()
         if stat == 'ndcg':
             data[score_name] = 100**data[score_name].astype(float)
             data[score_name_2] = 100**data[score_name_2].astype(float)
-        print(data.loc[data[score_name]!=data[score_name_2]])
+        #print(data.loc[data[score_name]!=data[score_name_2]])
         
-        sns.histplot(ax=axs[0,0], x=score_name, data=data[[score_name, 'type']].sort_values('type'), alpha=0.3, hue='type', bins=bins, stat='count', kde=True)
-        axs[0,0].set_xlim((-1, 1))
-        sns.scatterplot(ax=axs[1,1], data=g, x=score_name, y='measurement', hue='type', alpha=0.3)
+        #sns.histplot(ax=axs[0,0], x=score_name, data=data[[score_name, 'type']].sort_values('type'), alpha=0.3, hue='type', bins=bins, stat='count', kde=True)
+        #axs[0,0].set_xlim((-1, 1))
+        #sns.scatterplot(ax=axs[1,1], data=g, x=score_name, y='measurement', hue='type', alpha=0.3)
         g = sns.jointplot(data=data, x=score_name_2, y=score_name, hue='type', kind='hist', marginal_kws=dict(bins=20), joint_kws=dict(alpha=0), height=10)
         min_size = data['obs'].min() * 5
         max_size = data['obs'].max() * 5
         for code, row in data.reset_index().iterrows():
             if (row['obs'] > min_obs):# and (row['code'] not in ('1RTB', '1BVC', '1RN1', '1BNI', '1BPI', '1HZ6', '1OTR', '2O9P', '1AJ3', '3VUB', '1LZ1')):# \
             #if row['code'] in ['4E5K', '3D2A', '1ZNJ', '1WQ5', '1UHG', '1TUP', '1STN', '1QLP', '1PGA']:
-                g.ax_joint.text(row[score_name_2]-0.01, row[score_name]-0.01, f"{row['code']}:{row['obs']}", size=8)
-        ax = sns.scatterplot(data=data, x=score_name_2, y=score_name, hue='type', size='obs', style='marker', sizes=(min_size,max_size), ax=g.ax_joint, alpha=0.4)#,
+                g.ax_joint.text(row[score_name_2]-0.01, row[score_name]-0.01, f"{row['code']}:{row['obs']}", size=6)
+        ax = sns.scatterplot(data=data, x=score_name_2, y=score_name, hue=marker_name, size='obs', style=marker_name, sizes=(min_size,max_size), ax=g.ax_joint, alpha=0.6)#,
                             #markers={True: "s", False: "o"})
         small = np.array(i[[score_name_2, score_name]].dropna()).min().min()
         big = np.array(data[[score_name_2, score_name]].dropna()).max().max()
@@ -1287,8 +1335,14 @@ def compute_stats(
         # make sure to not accidentally modify the input
         db_internal = db_gt_preds.copy(deep=True)
         if grouper is not None:
-            db_grouper = db_internal[[grouper]]
+            index_names = db_internal.index.names
+            if index_names == [None]:
+                db_internal.index.name = 'uid_sym'
+                index_names = ['uid_sym']
+            db_grouper = db_internal[[grouper]].reset_index().drop_duplicates()
+            db_grouper = db_grouper.set_index(index_names)
             db_internal = db_internal.drop(grouper, axis=1)
+        # currently, grouper cant be None
         else:
             db_grouper = db_internal[[]]
 
@@ -1467,6 +1521,7 @@ def compute_stats(
 
                     if 'n' in stats or stats == ():
                         df_out.loc[(meas,sp,col), 'n'] = len(pred_df_bin)
+                        saved_n = len(pred_df_bin)
                     if len(pred_df_bin) == 0:
                         raise AssertionError(f'There are no {col} predictions in this scaffold!')
                     
@@ -1488,8 +1543,8 @@ def compute_stats(
                         df_out.loc[(meas,sp,col), 'sensitivity'] = tp/(tp+fn)
                     if 'specificity' in stats or stats == ():         
                         df_out.loc[(meas,sp,col), 'specificity'] = tn/(tn+fp)
-                    if 'precision' in stats or stats == (): 
-                        df_out.loc[(meas,sp,col), 'precision'] = tp/(tp+fp)
+                    if 'PPV' in stats or stats == (): 
+                        df_out.loc[(meas,sp,col), 'PPV'] = tp/(tp+fp)
                     if 'pred_positives' in stats or stats == ():
                         df_out.loc[(meas,sp,col), 'pred_positives'] = tp+fp
                     if 'accuracy' in stats or stats == (): 
@@ -1643,6 +1698,8 @@ def compute_stats(
                         df_out.loc[(meas,sp,col), 'weighted_spearman'] = w_cum_p / (w_cum_d if w_cum_d > 0 else 1)
                         df_out.loc[(meas,sp,col), 'n_proteins_spearman'] = cum_d
                         df_out.loc[(meas,sp,col), 'n_muts_spearman'] = cum_muts
+                        if cum_muts > saved_n:
+                            print(cum_muts, saved_n, sp, col)
 
                     # refresh the discrete dataframe
                     pred_df_discrete = cur_df_discrete[[col,meas]].dropna().join(db_grouper)
@@ -2158,7 +2215,7 @@ def model_combinations_heatmap_2(df, preds, statistic, direction, upper='corr', 
     return stat_df
 
 
-def custom_barplot(data, x, y, hue, width, ax, use_color=None, legend_labels=None, legend_colors=None, std=True):
+def custom_barplot(data, x, y, hue, width, ax, use_color=None, legend_labels=None, legend_colors=None, std=True, capsize=5):
 
     data = data.dropna(how='all', axis=1)
 
@@ -2205,9 +2262,9 @@ def custom_barplot(data, x, y, hue, width, ax, use_color=None, legend_labels=Non
             if 'ddG' in x_value or 'dTm' in x_value:
                 continue
             filtered_data = data[(data[x] == x_value) & (data[width] == width_value)]
+            y_value = filtered_data[f'{y}_mean'].item()#.mean()
             y_std = 0
             if std:
-                y_value = filtered_data[f'{y}_mean'].item()#.mean()
                 y_std = filtered_data[f'{y}_std'].item()
 
             y_max = max(y_max, y_value)
@@ -2215,7 +2272,9 @@ def custom_barplot(data, x, y, hue, width, ax, use_color=None, legend_labels=Non
 
             if legend_labels is not None and legend_colors is not None:
                 color = lut[hue_value]
-            ax.bar(bar_centers[i, j], y_value, color=color, width=bar_width, alpha=1 if not use_color else 0.4, yerr=y_std)
+            ax.bar(bar_centers[i, j], y_value, color=color, width=bar_width, alpha=1 if not use_color else 0.4)#, yerr=y_std)
+            if std:
+                ax.errorbar(bar_centers[i, j], y_value, yerr=y_std, fmt='none', ecolor='black', capsize=capsize, elinewidth=0.5)
         ax.axhline(y=y_max, color=color, linestyle='dashed')
 
     ax.set_xticks(np.arange(len(unique_x)))
@@ -2246,15 +2305,30 @@ def compare_performance(dbc,
                         grouper = 'cluster',
                         noise = 0,
                         duplicates = False,
+                        order = None,
+                        plots = 'both',
+                        drop_label = False,
+                        asterisk = ()
                         ):
 
+    rename_dict = {'delta_kdh': 'Δ hydrophobicity', 'delta_vol': 'Δ volume', 'rel_ASA': 'relative ASA', 'neff': 'N effective seqs'}
+    title_prefix = rename_dict.get(split_col, split_col)
+    if split_col_2 is not None:
+        title_prefix += f' and {rename_dict.get(split_col_2, split_col_2)}'
+    
     if statistic_2 is None:
         statistic_2 = statistic
 
     font = {'size'   : 20}
     matplotlib.rc('font', **font)
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15,20), sharex=True, dpi=300)
+    if plots == 'both':
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15,17.25), sharex=True, dpi=300)
+    elif plots == 'top':
+        fig, ax1 = plt.subplots(1, 1, figsize=(15,10), dpi=300)
+    elif plots == 'bottom':
+        fig, ax2 = plt.subplots(1, 1, figsize=(15,10), dpi=300)
+
     fig.patch.set_facecolor('white')
     sns.set_palette('tab10')
 
@@ -2263,11 +2337,12 @@ def compare_performance(dbc,
         db_complete = db_complete[subset + [c for c in dbc.columns if '_dir' not in c]]
 
     db_complete = db_complete.dropna(subset=measurement)
+    if drop_label:
+        db_complete = db_complete.drop('ddG_dir', axis=1)
 
     dbs_bs = bootstrap_by_grouper(db_complete, n_bootstraps, grouper=grouper, noise=noise, drop=False, duplicates=duplicates)
 
     # Ungrouped performance (doesn't change)
-    #ungrouped = compute_stats(db_complete, measurements=[measurement], stats=[statistic_2] + ['n', 'tp', 'tn', 'fp', 'fn'])
     for i in range(n_bootstraps):
         if i == 0:
             #full = compute_stats(db_complete.sample(frac=1, replace=True), measurements=[measurement], stats=[statistic] + ['n'])
@@ -2302,7 +2377,9 @@ def compare_performance(dbc,
     #print(ungrouped)
     ungrouped0 = ungrouped
     ungrouped0 = ungrouped0.sort_values(f'{statistic_2}_mean', ascending=False)
-    #print(ungrouped0)
+
+    if order is not None:
+        ungrouped0 = ungrouped0.set_index('model').loc[order, :].reset_index()
 
     # Unnormalized split performance
     #c = compute_stats(db_complete, split_col=split_col, split_col_2=split_col_2, split_val=threshold_1, split_val_2=threshold_2, measurements=[measurement], stats=[statistic_2] + ['n', 'tp', 'tn', 'fp', 'fn'])
@@ -2330,6 +2407,8 @@ def compare_performance(dbc,
     elif count_muts:
         full = full.rename({f'n_muts_{statistic}': f'n_muts_{statistic}_0'}, axis=1)
         full['n'] = full[[f'n_muts_{statistic}_{i}' for i in range(n_bootstraps)]].mean(axis=1).astype(int)
+        print(full['n'].mean())
+        print(full[[f'n_{i}' for i in range(n_bootstraps)]].mean(axis=1).astype(int).mean())
     else:
         full['n'] = full[[f'n_{i}' for i in range(n_bootstraps)]].mean(axis=1).astype(int)
     full[f'{statistic_2}_std'] = full[[f'{statistic_2}_{i}' for i in range(n_bootstraps)]].std(axis=1)
@@ -2381,32 +2460,35 @@ def compare_performance(dbc,
 
     categories = ungrouped0['model'].unique()
 
-    # Class-wise predicted distribution
-    my_palette = ["#34aeeb", "#eb9334", "#3452eb", "#eb4634"]
-    legend = sns.boxplot(data=ungrouped1,x='variable',y='value',hue=f'split',ax=ax2, palette=my_palette).legend_
-                           # split=True if threshold_2 is None else False, bw=0.2, cut=0,
-    labels = [t.get_text() for t in legend.texts]
-    colors = [c.get_facecolor() for c in legend.legendHandles]
+    if plots not in ['bottom', 'both']:
+        ax2 = fig.add_axes([0, 0, 0, 0], visible=False, sharex=ax1)
 
-    ax2.set_title('Class-wise predicted distribution')
-    ax2.set_ylabel('Stability / log-likelihood')
+    # Scaffold-wise predicted distribution
+    my_palette = ["#34aeeb", "#eb9334", "#3452eb", "#eb4634"]
+    legend_elements = sns.boxplot(data=ungrouped1,x='variable',y='value',hue=f'split',ax=ax2, palette=my_palette).legend_
+                        # split=True if threshold_2 is None else False, bw=0.2, cut=0,
+    labels = [t.get_text() for t in legend_elements.texts]
+    colors = [c.get_facecolor() for c in legend_elements.legendHandles]
+
+    ax2.set_title(title_prefix + ' scaffold-wise predicted distribution')
+    ax2.set_ylabel('stability or Δ log-likelihood')
     ax2.set_xlabel('')
     ax2.grid()
     ax2.yaxis.grid(False)
     ax2.axhline(y=0, color='r', linestyle='dashed')
 
-    legend_elements = custom_barplot(data=splits.drop_duplicates(), x='model', y=statistic_2, hue='class', width='n', ax=ax1, legend_colors=colors, legend_labels=labels)
-    _ = custom_barplot(data=ungrouped.reset_index().set_index('model').loc[ungrouped0['model']].drop_duplicates().reset_index(), 
-                   x='model', y=statistic_2, hue='class', width='n', ax=ax1, use_color='grey')
+    if plots in ['top', 'both']:
+        legend_elements = custom_barplot(data=splits.drop_duplicates(), x='model', y=statistic_2, hue='class', width='n', ax=ax1, legend_colors=colors, legend_labels=labels)
+        _ = custom_barplot(data=ungrouped.reset_index().set_index('model').loc[ungrouped0['model']].drop_duplicates().reset_index(), 
+                    x='model', y=statistic_2, hue='class', width='n', ax=ax1, use_color='grey', std=False) #capsize=12
 
-    statistic_ = {'weighted_ndcg': 'wNDCG', 'weighted_spearman': 'wρ', 'weighted_auprc': 'wAUPRC', 'auprc': 'AUPRC', 'spearman': 'ρ'}[statistic_2]
-    ax1.set_title('Class-wise mean performance') #'Delta vs. split mean'
-    ax1.set_ylabel(statistic_)
-    ax1.grid()
-    ax1.yaxis.grid(False)
-    ax1.set_xlabel('')
+        statistic_ = {'weighted_ndcg': 'wNDCG', 'weighted_spearman': 'wρ', 'weighted_auprc': 'wAUPRC', 'auprc': 'AUPRC', 'spearman': 'ρ', 'PPV': 'PPV', 'accuracy': 'Accuracy', 'MCC': 'MCC'}[statistic_2]
+        ax1.set_title(title_prefix + ' scaffold-wise mean performance') #'Delta vs. split mean'
+        ax1.set_ylabel(statistic_)
+        ax1.grid()
+        ax1.yaxis.grid(False)
+        ax1.set_xlabel('')
 
-    rename_dict = {'delta_kdh': 'Δ hydrophobicity', 'delta_vol': 'Δ volume', 'rel_ASA': 'relative ASA'}
     new_legend_elements = []
     for legend_element in legend_elements:
         original_label = legend_element.get_label()
@@ -2423,238 +2505,31 @@ def compare_performance(dbc,
                 legend_element.set_label(original_label)
         new_legend_elements.append(legend_element)
 
-    ax1.legend(handles=new_legend_elements, loc='lower left')
-    ax2.legend(handles=new_legend_elements)
-    ax2.set_xticks(ax2.get_xticks(), categories, rotation=45, ha='right')
-
-    for ax in list([ax2, ax1]):
-        for tick_label in ax.get_xticklabels():
+    if plots == 'both':
+        ax1.legend(handles=new_legend_elements, loc='lower left')
+        ax2.legend(handles=new_legend_elements, loc='lower left')
+    if plots == 'top':
+        ax1.set_xticks(ax1.get_xticks(), categories, rotation=45, ha='right')
+        for tick_label in ax1.get_xticklabels():
             tick_label.set_color(determine_base_color(tick_label))
-    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-
-    print([tick.get_text() for tick in ax2.get_xticklabels()])
+        ax1.legend(handles=new_legend_elements, loc='lower left')
+    elif plots in ['both', 'bottom']:
+        ax2.set_xticks(ax2.get_xticks(), categories, rotation=45, ha='right')
+        for tick_label in ax2.get_xticklabels():
+            tick_label.set_color(determine_base_color(tick_label))
+        print([tick.get_text() for tick in ax2.get_xticklabels()])
+    
+    ax = ax1 if plots in ['both', 'top'] else ax2
     remapped_x = [remap_names_2[tick.get_text()] if tick.get_text() in remap_names_2.keys() else tick.get_text() for tick in ax2.get_xticklabels()]
+    remapped_x = [x+'*' if x in asterisk else x for x in remapped_x]
     ax.set_xticklabels(remapped_x)
+
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
 
     print(splits.groupby('class')['n'].max())
     plt.show()
-    return splits
+    return splits, ungrouped0['model']
 
-def custom_barplot_2(data, x, y, hue, width, ax, use_color=None, legend_labels=None, legend_colors=None):
-
-    if legend_labels is not None and legend_colors is not None:
-        lut = dict(zip(legend_labels, legend_colors))
-
-    unique_x = data[x].unique()
-    data = data.copy(deep=True)#.sort_values(width)
-    if legend_labels is not None:
-        unique_hue = legend_labels
-        #unique_width = data.groupby([hue, width]).first().reset_index(level=1).loc[unique_hue][width]#.index.get_level_values(1)
-    else:
-        unique_hue = data[hue].unique()
-    unique_width = data.groupby(hue)[width].max()
-
-    #print(unique_width, unique_hue)
-    #assert len(unique_hue) == len(unique_width)
-
-    if use_color == None:
-        colors = legend_colors
-    else:
-        colors = [use_color]
-
-    max_width = sum(unique_width)
-
-    bar_centers = np.zeros((len(unique_x), len(unique_hue)))
-    for i in range(len(unique_x)):
-        bar_centers[i, :] = i
-
-    w_sum = 0
-    for j, w in enumerate(unique_width):
-        w_sum += w
-        bar_centers[:, j] += (-max_width / 2 + w_sum -w/2) / (max_width * 1.1)
-
-    for j, (width_value, hue_value, color) in enumerate(zip(unique_width, unique_hue, colors)):
-        y_max = -1
-        for i, x_value in enumerate(unique_x):
-            filtered_data = data[(data[x] == x_value) & (data[hue] == hue_value)] #(data[width] == width_value) & 
-            y_value = filtered_data[y].mean()
-            y_max = max(y_max, y_value)
-            bar_width = filtered_data[width].mean() / (max_width * 1.1)
-
-            if legend_labels is not None and legend_colors is not None:
-                color = lut[hue_value]
-            ax.bar(bar_centers[i, j], y_value, color=color, width=bar_width, alpha=1 if not use_color else 0.4)
-        ax.axhline(y=y_max, color=color, linestyle='dashed')
-
-    ax.set_xticks(np.arange(len(unique_x)))
-    ax.set_xticklabels(unique_x)
-    ax.set_xlabel(x)
-    ax.set_ylabel(y)
-
-    if legend_labels is not None and legend_colors is not None:
-        legend_elements = [Patch(facecolor=lut[hue_value], label=f'{hue_value}: {int(width_value)}') for hue_value, width_value in zip(unique_hue, unique_width)]
-    else:
-        legend_elements = [Patch(facecolor=color, label=f'{hue_value}: {int(width_value)}') for hue_value, width_value, color in zip(unique_hue, unique_width, colors)]
-    #ax.legend(handles=legend_elements, title=hue)
-    return legend_elements
-
-def compare_performance_2(db_complete,
-                        threshold_1 = 1.5, 
-                        threshold_2 = None, 
-                        split_col = 'hbonds', 
-                        split_col_2 = None, 
-                        direction = 'dir',
-                        statistic = 'MCC'):
-
-    font = {'size'   : 10}
-    matplotlib.rc('font', **font)
-
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15,20), sharex=True)
-    fig.patch.set_facecolor('white')
-    sns.set_palette('tab10')
-
-    dbc = db_complete.copy(deep=True)
-
-    # Ungrouped performance (doesn't change)
-    c0 = compute_stats_bidirectional(dbc, stats=[statistic] + ['n'])
-    c00 = c0.reset_index()
-
-    if split_col != 'direction_split':
-        c00 = c00.loc[c00['direction']==direction]
-    else:
-        c00 = c00.loc[c00['direction']=='combined']
-    c00 = c00.sort_values(statistic, ascending=False)
-    c00 = c00.set_index('model')
-
-    # get only the models we want to include specified by custom colors
-    new_index = []
-    for i in c00.index:
-        for color in list(custom_colors.keys()):
-            if color in i:
-                new_index.append(i)
-                break
-    c00 = c00.loc[new_index]
-
-    # Unnormalized split performance
-    c = compute_stats_bidirectional(dbc, split_col=split_col if split_col != 'direction_split' else None, split_col_2=split_col_2, 
-                        split_val=threshold_1, split_val_2=threshold_2, stats=[statistic] + ['n'])
-    c1 = c.reset_index()
-
-    if split_col != 'direction_split':
-        c1 = c1.loc[c1['direction']==direction]
-    else:
-        remap = {'dir': 1, 'inv': 0}
-        c1['tmp_dir'] = c1['direction'].map(remap)
-        c1[split_col] = np.nan
-        c1.loc[c1['tmp_dir'] > 0.5, split_col] = 'direction_split > 0.5'
-        c1.loc[c1['tmp_dir'] <= 0.5, split_col] = 'direction_split <= 0.5'
-        c1['model'] = c1['model'].str[:-4]
-        c1 = c1.dropna(subset=split_col)
-        
-    c1 = c1.set_index('model').loc[new_index].reset_index()
-    
-    # case 2 split cols
-    if split_col_2 is not None:
-        dbc[f'{split_col} > {threshold_1} & {split_col_2} > {threshold_2}'] = (dbc[split_col] > threshold_1) & (dbc[split_col_2] > threshold_2)
-        dbc[f'{split_col} <= {threshold_1} & {split_col_2} > {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col_2] > threshold_2)
-        dbc[f'{split_col} > {threshold_1} & {split_col_2} <= {threshold_2}'] = (dbc[split_col] > threshold_1) & (dbc[split_col_2] <= threshold_2)
-        dbc[f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col_2] <= threshold_2)
-        vvs = [f'{split_col} > {threshold_1} & {split_col_2} > {threshold_2}', 
-                 f'{split_col} <= {threshold_1} & {split_col_2} > {threshold_2}',
-                 f'{split_col} > {threshold_1} & {split_col_2} <= {threshold_2}',
-                 f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}']
-
-    # case 1 split col, 2 thresholds
-    elif threshold_2 is not None:
-        dbc[f'{split_col} > {threshold_1}'] = dbc[split_col] > threshold_1
-        dbc[f'{split_col} > {threshold_1}'] = dbc[split_col] > threshold_1
-        dbc[f'{threshold_1} >= {split_col} > {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col] > threshold_2)
-        dbc[f'{split_col} <= {threshold_2}'] = dbc[split_col] <= threshold_2
-        vvs = [f'{split_col} > {threshold_1}', f'{threshold_1} >= {split_col} > {threshold_2}', f'{split_col} <= {threshold_2}']
-
-    # case 1 split col, 1 threshold
-    elif threshold_2 is None and split_col != 'direction_split':
-        dbc[f'{split_col} > {threshold_1}'] = dbc[split_col] > threshold_1
-        dbc[f'{split_col} <= {threshold_1}'] = dbc[split_col] <= threshold_1
-        vvs = [f'{split_col} > {threshold_1}', f'{split_col} <= {threshold_1}']
-
-    if direction == 'combined':
-        dbc_stack = stack_frames(dbc).reset_index().set_index('uid')
-        #dbc_stack.index = dbc_stack.index.str[:-4]
-        dbc = dbc_stack.join(dbc.drop([c for c in dbc.columns if '_dir' in c or '_inv' in c], axis=1))
-
-    if split_col == 'direction_split':
-        dbc = dbc.reset_index()
-        tmp_split_col = 'direction'
-
-        remap = {'dir': 1, 'inv': 0}
-        dbc[split_col] = dbc['direction'].map(remap)
-        dbc[f'{split_col} > {threshold_1}'] = dbc[split_col] > threshold_1
-        dbc[f'{split_col} <= {threshold_1}'] = dbc[split_col] <= threshold_1
-        vvs = [f'{split_col} > {threshold_1}', f'{split_col} <= {threshold_1}']
-        
-    dbc = dbc.melt(id_vars=dbc.columns.drop(vvs), value_vars=vvs)
-    dbc = dbc.loc[dbc['value']].rename({'variable':'split'}, axis=1)
-    vvs2 = new_index
-
-    dbc = dbc.melt(id_vars=['split'], value_vars=vvs2)
-    std = dbc.groupby('variable')['value'].transform('std')
-    dbc['value'] /= std
-    c01 = pd.DataFrame()
-    for key in new_index:
-        subset = dbc.loc[dbc['variable']==key]
-        c01 = pd.concat([c01, subset])
-
-    categories = new_index
-
-    # Class-wise predicted distribution
-    ax = sns.violinplot(data=c01,x='variable',y='value',hue=f'split',ax=ax2, split=True if threshold_2 is None else False, bw=0.2, cut=0)
-
-    max_values = c01.groupby('variable')['value'].idxmax()
-
-    # Loop over each max value
-    for idx in max_values:
-        # Get the row from the DataFrame
-        row = c01.loc[idx]
-        # Get the x-coordinate for the annotation
-        x_coord = ax.get_xticks()[row['variable'] == c01['variable'].unique()]
-        ax.text(x_coord, row['value'], -round(float(c00.at[row['variable'], 'antisymmetry']), 2), ha='center', va='bottom')
-        ax.text(x_coord, row['value'], -round(float(c00.at[row['variable'], 'bias']), 2), ha='center', va='top') 
-
-    legend = ax.legend_
-    labels = [t.get_text() for t in legend.texts]
-    colors = [c.get_facecolor() for c in legend.legendHandles]
-
-    ax2.set_title('Class-wise predicted distribution')
-    ax2.set_ylabel('Stability / log-likelihood')
-    #ax2.set_xticks([])
-    ax2.set_xlabel('')
-    ax2.grid()
-    ax2.axhline(y=0, color='r', linestyle='dashed')
-    
-    legend_elements = custom_barplot_2(data=c1.drop_duplicates(), x='model', y=statistic, hue='class' if split_col != 'direction_split' else split_col, 
-        width='n', ax=ax1, legend_colors=colors, legend_labels=labels)
-    _ = custom_barplot_2(data=c00.drop_duplicates().reset_index(), 
-                   x='model', y=statistic, hue='class', width='n', ax=ax1, use_color='yellow')
-    ax1.set_title(statistic) #'Delta vs. split mean'
-    ax1.grid()
-    ax1.set_xlabel('')
-    if split_col == 'direction_split':
-        ax2.legend(handles=legend_elements, labels=['direct', 'inverse'])
-    else:
-       ax2.legend(handles=legend_elements) 
-    ax2.set_xticks(ax2.get_xticks(), categories, rotation=45, ha='right')
-
-    for ax in list([ax2, ax1]):
-        for tick_label in ax.get_xticklabels():
-            for key, val in custom_colors.items():
-                if key in tick_label.get_text():
-                    tick_label.set_color(custom_colors[key])
-    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-
-    print(c1.groupby('class')['n'].max())
-    plt.show()
-    return c1
 
 def stack_frames(dbf):
     db_stack = dbf.copy(deep=True)
@@ -2672,6 +2547,7 @@ def stack_frames(dbf):
     dbf = df.pivot_table(index=['direction', 'uid'], columns='pred_col', values='value')
     return dbf
 
+
 def extract_decimal_number(text):
     # Define a regular expression to match decimal numbers
     decimal_regex = r"\d+\.\d+"
@@ -2685,6 +2561,7 @@ def extract_decimal_number(text):
     
     # If no match is found, return NaN
     return np.nan
+
 
 def compute_stats_bidirectional(db_gt_preds, split_col=None, split_val=None, split_col_2=None, split_val_2=None, stats=(), directions=('dir', 'inv'), stacked=False, grouper='code'):
 
@@ -2899,8 +2776,8 @@ def compute_stats_bidirectional(db_gt_preds, split_col=None, split_val=None, spl
                     df_out.loc[(direction,sp,pred_col), 'sensitivity'] = tp/(tp+fn)
                 if 'specificity' in stats or stats == ():         
                     df_out.loc[(direction,sp,pred_col), 'specificity'] = tn/(tn+fp)
-                if 'precision' in stats or stats == (): 
-                    df_out.loc[(direction,sp,pred_col), 'precision'] = tp/(tp+fp)
+                if 'PPV' in stats or stats == (): 
+                    df_out.loc[(direction,sp,pred_col), 'PPV'] = tp/(tp+fp)
                 if 'pred_positives_ratio' in stats or stats == ():
                     df_out.loc[(direction,sp,pred_col), 'pred_positives_ratio'] = (tp+fp)/(tp+fn)
                 if 'accuracy' in stats or stats == (): 
@@ -3181,8 +3058,8 @@ def compute_stats_bidirectional(db_gt_preds, split_col=None, split_val=None, spl
                         df_out.loc[('combined',sp,pred_col_comb), 'sensitivity'] = tp/(tp+fn)
                     if 'specificity' in stats or stats == ():         
                         df_out.loc[('combined',sp,pred_col_comb), 'specificity'] = tn/(tn+fp)
-                    if 'precision' in stats or stats == (): 
-                        df_out.loc[('combined',sp,pred_col_comb), 'precision'] = tp/(tp+fp)
+                    if 'PPV' in stats or stats == (): 
+                        df_out.loc[('combined',sp,pred_col_comb), 'PPV'] = tp/(tp+fp)
                     if 'pred_positives_ratio' in stats or stats == ():
                         df_out.loc[('combined',sp,pred_col_comb), 'pred_positives_ratio'] = (tp+fp)/(tp+fn)
                     if 'accuracy' in stats or stats == (): 
@@ -3467,6 +3344,7 @@ def custom_recursive_feature_addition(df_train, dfs_test, cols, target, model, l
                 hue_order.append(hue)
 
     wdf = pd.concat(wdf)
+    #print(wdf)
     # Create color mapping
     color_mapping = get_color_mapping(wdf, 'variable')
 
@@ -3476,12 +3354,14 @@ def custom_recursive_feature_addition(df_train, dfs_test, cols, target, model, l
 
     test_scores_ = test_scores.reset_index(drop=True)
     for i, name in enumerate(test_scores.columns):
-        sns.lineplot(data=test_scores_[name], ax=ax2, color=['grey', 'purple', 'red'][i], label=f'{name} Ensemble')
+        if i < 4:
+            sns.lineplot(data=test_scores_[name], ax=ax2, color=['grey', 'purple', 'red', 'green'][i], label=f'{name} Ensemble')
     ax2.legend()
 
     # Plot the horizontal lines for the 'lines' column
     for i, (name, score) in enumerate(lines_scores.items()):
-        ax2.axhline(score, color=['grey', 'purple', 'red'][i], linestyle='--', label=f'{name} Benchmark')
+        if i < 4:
+            ax2.axhline(score, color=['grey', 'purple', 'red', 'green'][i], linestyle='--', label=f'{name} Benchmark')
     # Create the barplot with specified order
     ax = sns.barplot(data=wdf, ax=ax1, hue='variable', x='index', y='value', hue_order=hue_order)
     # Get the x-ticks positions
@@ -3566,6 +3446,10 @@ def compare_distributions_violin(df1, df2, shared_columns=None, source1='Q3421',
         # Calculate medians before transformation
         median_df1 = df1[col].median()
         median_df2 = df2[col].median()
+        max_df1 = df1[col].max()
+        max_df2 = df2[col].max()
+        min_df1 = df1[col].min()
+        min_df2 = df2[col].min()
 
         # Normalize column
         combined_col = pd.concat([df1[[col]], df2[[col]]])
@@ -3587,9 +3471,29 @@ def compare_distributions_violin(df1, df2, shared_columns=None, source1='Q3421',
         plt.plot([i-0.15-label_adjust, i], [median_df1_scaled, median_df1_scaled], color='blue', linestyle='dashed')
         plt.plot([i, i+0.25+label_adjust], [median_df2_scaled, median_df2_scaled], color='red', linestyle='dashed')
 
+        # Plot max markers
+        max_df1_scaled = scaler.transform([[max_df1]])[0, 0]
+        max_df2_scaled = scaler.transform([[max_df2]])[0, 0]
+        plt.plot([i-label_adjust, i], [max_df1_scaled, max_df1_scaled], color='blue', linestyle='dashed')
+        plt.plot([i, i+label_adjust], [max_df2_scaled, max_df2_scaled], color='red', linestyle='dashed')
+
+        # Plot min markers
+        min_df1_scaled = scaler.transform([[min_df1]])[0, 0]
+        min_df2_scaled = scaler.transform([[min_df2]])[0, 0]
+        plt.plot([i-label_adjust, i], [min_df1_scaled, min_df1_scaled], color='blue', linestyle='dashed')
+        plt.plot([i, i+label_adjust], [min_df2_scaled, min_df2_scaled], color='red', linestyle='dashed')
+
         # Annotate median markers
         ax.text(i-0.3-label_adjust, median_df1_scaled, f'{median_df1:.2f}', color='blue', va='center', fontsize=10)
         ax.text(i+0.3+label_adjust, median_df2_scaled, f'{median_df2:.2f}', color='red', va='center', fontsize=10)
+
+        # Annotate max markers
+        ax.text(i-0.2-label_adjust, max_df1_scaled, f'{max_df1:.2f}', color='blue', va='center', fontsize=10)
+        ax.text(i+0.05+label_adjust, max_df2_scaled, f'{max_df2:.2f}', color='red', va='center', fontsize=10)
+
+        # Annotate min markers
+        ax.text(i-0.2-label_adjust, min_df1_scaled, f'{min_df1:.2f}', color='blue', va='center', fontsize=10)
+        ax.text(i+0.05+label_adjust, min_df2_scaled, f'{min_df2:.2f}', color='red', va='center', fontsize=10)
 
     remapped_x = [remap_names[tick.get_text()] if tick.get_text() in remap_names.keys() else tick.get_text() for tick in ax.get_xticklabels()]
     ax.set_xticklabels(remapped_x)
@@ -3600,3 +3504,190 @@ def compare_distributions_violin(df1, df2, shared_columns=None, source1='Q3421',
     plt.xlabel('Feature', fontsize=24)
     plt.ylabel('Normalized Value', fontsize=24)
     plt.show()
+
+
+def compare_distributions_boxes(dfs, shared_columns=None, sources=None):
+    """
+    Generate a violin plot for selected columns from multiple DataFrames with different hues for each DataFrame,
+    including annotations for min and max values for each feature and a zero-line annotation.
+
+    Parameters:
+        dfs (list of pd.DataFrame): List of DataFrames to compare.
+        shared_columns (list of str): List of column names to include in the comparison. If None, computes intersection of all DataFrames.
+        sources (list of str): Labels for the sources corresponding to each DataFrame in `dfs`.
+
+    Returns:
+        None: Displays a violin plot.
+    """
+    remap_names = {'delta_chg_dir': 'Δ charge', 'delta_vol_dir': 'Δ volume', 'hbonds': 'wt hydrogen bonds', 
+                'multimer': 'chains in assembly', 'neff': 'n effective sequences', 'b_factor': 'beta factor',
+                'rel_ASA_dir': 'SASA', 'delta_kdh_dir': 'Δ hydrophobicity', 'ddG': 'ΔΔG', 'structure_length': 'n residues', 
+                'completeness_score': 'alignment completeness', 'log_neff': 'log(N effective seqs)', 'conservation': 'conservation (%)'}
+
+    if shared_columns is None:
+        # Compute the intersection of columns across all DataFrames
+        shared_columns = set(dfs[0].columns)
+        for df in dfs[1:]:
+            shared_columns.intersection_update(df.columns)
+        shared_columns = list(shared_columns)
+
+    # Exclude boolean columns
+    shared_columns = [col for col in shared_columns if all(df[col].dtype != 'bool' for df in dfs)]
+
+    # Create a combined dataframe with an extra column to indicate the source dataframe
+    combined_df = pd.DataFrame()
+    for df, source in zip(dfs, sources):
+        df_copy = df[shared_columns].copy()
+        df_copy['Source'] = source
+        df_copy['frac. cluster occ.'] = df.groupby('cluster')['cluster'].transform('count') / len(df_copy)
+
+        combined_df = pd.concat([combined_df, df_copy])
+
+    shared_columns += ['frac. cluster occ.']
+
+    # Apply Min-Max Scaling per feature to handle global min and max properly
+    scaler = MinMaxScaler()
+    scaled_data = pd.DataFrame(scaler.fit_transform(combined_df[shared_columns]), columns=shared_columns)
+    scaled_data['Source'] = combined_df['Source'].values
+    scaled_zero = scaler.transform([[0]*len(shared_columns)])[0]
+    print(scaled_zero)
+
+    # Melt the scaled dataframe to long format for plotting
+    melted_df = scaled_data.melt(id_vars='Source', value_vars=shared_columns)
+
+    # Plot a violin plot for each shared column
+    plt.figure(figsize=(20, 10))
+    ax = sns.boxenplot(x='variable', y='value', hue='Source', data=melted_df)
+    #ax = sns.violinplot(x='variable', y='value', hue='Source', data=melted_df, split=True, bw=0.1, inner='quart')
+
+    # Enhance annotations and place legend outside
+    plt.title('Feature Distributions Comparison')
+    plt.xlabel('Feature')
+    plt.ylabel('Normalized Value')
+    plt.xticks(rotation=45)  # Rotate x-axis labels for readability
+    ax.legend(title='Source', loc='upper left', bbox_to_anchor=(1.05, 1), borderaxespad=0.)
+
+    # Annotate min and max values for each feature correctly within the scaled context and draw zero lines
+    for i, col in enumerate(shared_columns):
+        # Get global min and max after scaling
+        feature_values = scaled_data[col]
+        scaled_min = feature_values.min()
+        scaled_max = feature_values.max()
+
+        # Add text annotations
+        ax.text(i, scaled_min, f'{combined_df[col].min():.2f}', color='blue', ha='center', va='top', fontsize=12)
+        ax.axhline(y=scaled_min, xmin=(i)/len(shared_columns), xmax=(i + 1)/len(shared_columns), color='blue', linestyle='--', linewidth=1)
+        ax.text(i, scaled_max, f'{combined_df[col].max():.2f}', color='red', ha='center', va='bottom', fontsize=12)
+        ax.axhline(y=scaled_max, xmin=(i)/len(shared_columns), xmax=(i + 1)/len(shared_columns), color='red', linestyle='--', linewidth=1)
+
+        if combined_df[col].min() > 1 or combined_df[col].min() < 0 :
+            # Draw zero line
+            ax.axhline(y=scaled_zero[i], xmin=(i)/len(shared_columns), xmax=(i + 1)/len(shared_columns), color='red', linestyle='--', linewidth=2)
+
+        if col == 'ddG':
+            ax.axhline(y=scaler.transform([[1]*len(shared_columns)])[0][i], xmin=(i)/len(shared_columns), xmax=(i + 1)/len(shared_columns), color='green', linestyle='--', linewidth=1)
+            ax.axhline(y=scaler.transform([[-3]*len(shared_columns)])[0][i], xmin=(i)/len(shared_columns), xmax=(i + 1)/len(shared_columns), color='green', linestyle='--', linewidth=1)
+    
+    remapped_x = [remap_names[tick.get_text()] if tick.get_text() in remap_names.keys() else tick.get_text() for tick in ax.get_xticklabels()]
+    ax.set_xticklabels(remapped_x)
+    plt.show()
+
+def plot_joint_histogram(df1, df2, column, name1='K2369', name2='Q3421'):
+    """
+    Plots a joint histogram for the specified column from two DataFrames, 
+    with bars from each DataFrame placed adjacently.
+
+    Parameters:
+        df1 (pd.DataFrame): The first DataFrame.
+        df2 (pd.DataFrame): The second DataFrame.
+        column (str): The column name to plot the histogram for.
+
+    Returns:
+        None: Displays the plot.
+    """
+    # Count the occurrences of each category in the specified column for both dataframes
+    counts_df1 = df1[column].value_counts().reset_index()
+    counts_df2 = df2[column].value_counts().reset_index()
+
+    # Rename columns to a common format for easier handling in seaborn
+    counts_df1.columns = ['Amino Acid', 'count']
+    counts_df2.columns = ['Amino Acid', 'count']
+    
+    # Add a column to each to distinguish between the datasets
+    counts_df1['dataset'] = name1
+    counts_df2['dataset'] = name2
+
+    # Concatenate the two DataFrames vertically
+    combined_counts = pd.concat([counts_df1, counts_df2], ignore_index=True)
+    
+    # Plotting using seaborn
+    plt.figure(figsize=(10, 6))
+    sns.barplot(data=combined_counts, x='count', y='Amino Acid', hue='dataset', ci=None)
+
+    plt.xlabel('Count')
+    plt.ylabel('Amino Acid')
+    plt.title('Comparison of Amino Acid Frequencies')
+    plt.legend(title='Dataset')
+
+    plt.show()
+
+def bootstrap_table(df, 
+                    plot_cols, plot_models, plot_title, ylim, right_y_lim,
+                    table_cols, var_cols, sort_col, 
+                    saveloc='../data/extended/data_bootstrapped_formatted.csv'):
+
+    new_remap_cols = {}
+    for key, value in remap_cols.items():
+        new_remap_cols[key + '_mean'] = value + ' mean'
+        new_remap_cols[key + '_std'] = value + ' stdev'
+
+    df = df.sort_values(f'{sort_col}_mean', ascending=False).dropna(how='all', axis=1).reset_index()
+    tab_cols = [c+'_mean' for c in table_cols] + [c+'_std' for c in table_cols]
+    s4 = df[['model', 'model_type']+tab_cols]
+    s4['model'] = s4['model'].replace(remap_names_2)
+
+    stds = s4.drop(0).loc[:, [c for c in s4.columns if 'std' in c]].mean()
+    stds = pd.DataFrame(stds).T
+    stds.index = ['Avg. Dev.']
+    stds.index.name = 'model'
+    stds = stds.reset_index()
+    stds.columns = [c.replace('_std', '_mean') for c in stds.columns]
+    s4 = pd.concat([s4, stds])
+
+    s5 = s4.set_index(['model_type', 'model'])
+    s5.columns = [new_remap_cols[c] for c in s5.columns]
+    var_cols = [remap_cols[c]+ ' mean' for c in var_cols]
+
+    plt_cols = [c+'_mean' for c in plot_cols] + [c+'_std' for c in plot_cols]
+    tmp2 = df[['model']+plt_cols].set_index('model')
+
+    tmp2.columns = [new_remap_cols[c] for c in tmp2.columns]
+    tmp2 = tmp2.reset_index().drop_duplicates()
+
+    make_scatter_chart(tmp2, models=plot_models, title=plot_title, ylim=ylim, figsize=(7, 4), use_dual_y_axis=True, right_y_lim=right_y_lim)
+
+    s5_full = s5.copy(deep=True)
+    #print(s5_full)
+
+    # Iterate over the DataFrame and update the mean columns
+    for column in s5.columns:
+        if 'mean' in column:
+            stdev_column = column.replace('mean', 'stdev')
+            #s5_full[column] = s5_full[column].astype(str) + ' ± ' + s5_full[stdev_column].astype(str)
+            if column in var_cols and stdev_column in s5.columns:
+                stdev_column = column.replace('mean', 'stdev')
+                s5[column] = s5[column].apply(format_fixed_total_digits).astype(str) + ' ± ' + s5[stdev_column].apply(format_fixed_total_digits).astype(str)
+            else:
+                s5[column] = s5[column].apply(format_fixed_total_digits).astype(str)
+
+    s5 = s5[[col for col in s5.columns if 'stdev' not in col]]
+    s5.columns = [col[:-5] for col in s5.columns]
+    s5 = s5.replace('± nan', '', regex=True)
+    s5_full = s5_full.replace('± nan', '', regex=True)
+
+    #s5_full = s5_full[[col for col in s5_full.columns if 'stdev' not in col]]
+    #s5_full.columns = [col[:-5] for col in s5_full.columns]
+
+    s6 = s5.reset_index().rename({'model_type': 'Model Type', 'model': 'Model'}, axis=1).set_index(['Model Type', 'Model'])
+    s6.to_csv(saveloc, encoding='utf-8-sig')
+    return s6

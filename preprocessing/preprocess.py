@@ -69,24 +69,47 @@ def main(args):
 
     # to start preprocessing from the provided KORPM datasets, extra steps
     # are needed to convert to a CSV file
-    if '1merNCL' in args.db_loc:
-        db_ = pd.read_csv(args.db_loc, sep=' ', header=None)
-        db_ = db_.rename({0: 'code', 1: 'mutant', 2: 'ddG', 3: 'pos2'}, axis=1)
-        db_['wild_type'] = db_['mutant'].str[0]
-        db_['chain'] = db_['mutant'].str[1]
-        db_['position'] = db_['mutant'].str[2:-1]
-        db_['mutation'] = db_['mutant'].str[-1]
+    if 'Id25c03_1merNCL.txt' in args.db_loc:
+        locs = ['1merNCL', '1merNCLB']
+        for loc in locs:
+            db_ = pd.read_csv(
+                args.db_loc.replace('1merNCL', loc), sep=' ', header=None)
+            db_ = db_.rename(
+                {0: 'code', 1: 'mutant', 2: 'ddG', 3: 'pos2'}, axis=1)
+            db_['wild_type'] = db_['mutant'].str[0]
+            db_['chain'] = db_['mutant'].str[1]
+            db_['position'] = db_['mutant'].str[2:-1].astype(int)
+            db_['mutation'] = db_['mutant'].str[-1]
+            # correct wrong index
+            db_.loc[db_['code']=='1IV7', 'position'] -= 100
+            db_['uid'] = db_['code']+'_'\
+                +db_['position'].astype(str)+db_['mutation']
+            db_ = db_.drop_duplicates(subset=['uid'], keep='first')
+            if loc == '1merNCL':
+                print(args.db_loc.replace(
+                    'Id25c03_1merNCL.txt', 'K3822.csv'))
+                db_.to_csv(args.db_loc.replace(
+                    'Id25c03_1merNCL.txt', 'K3822.csv'))
+            elif loc == '1merNCLB':
+                db_.to_csv(args.db_loc.replace(
+                    'Id25c03_1merNCL.txt', 'K2369.csv'))
+        args.db_loc = args.db_loc.replace('Id25c03_1merNCL.txt', 'K3822.csv')
+        print(args.db_loc)
+            #elif os.path.basename(args.db_loc) == 'Id25c03_1merNCLB.txt':
+            #    args.db_loc = args.db_loc.replace(
+            #        'Id25c03_1merNCLB.txt', 'K2369.csv')
+            #    db_.to_csv(args.db_loc)
+
+    if 'cdna' in args.db_loc:
+        db_ = pd.read_csv(args.db_loc)
+        db_.columns = ['uniprot_id', 'code', 'chain', 'position', 'wild_type',
+                       'mutation', 'from', 'to', 'rel_rsa', 'ddG', 'sequence']
+        db_['code'] = db_['code'].str.upper()
+        db_['wild_type'] = db_['wild_type'].map(d)
+        db_['mutation'] = db_['mutation'].map(d)
         db_['uid'] = db_['code']+'_'+db_['position'].astype(str)+db_['mutation']
-        db_ = db_.drop_duplicates(subset=['uid'], keep='first').drop(
-            'uid', axis=1)
-        if os.path.basename(args.db_loc) == 'Id25c03_1merNCL.txt':
-            args.db_loc = args.db_loc.replace(
-                'Id25c03_1merNCL.txt', 'korpm_full.csv')
-            db_.to_csv(args.db_loc)
-        elif os.path.basename(args.db_loc) == 'Id25c03_1merNCLB.txt':
-            args.db_loc = args.db_loc.replace(
-                'Id25c03_1merNCLB.txt', 'korpm_reduced.csv')
-            db_.to_csv(args.db_loc)
+        args.db_loc = args.db_loc.replace('.csv', '_mapped.csv')
+        db_.to_csv(args.db_loc)
     
     # original database needs to be at this location and can be obtained from
     # the FireProtDB website or from Pancotti et al.
@@ -140,8 +163,8 @@ def main(args):
         db = db.rename({'PDB_ID': 'code', 'Chain ': 'chain', 
             'Wildtype': 'wild_type', 'Pos(PDB)': 'position', 
             'mutant ': 'mutation'}, axis=1)
-    elif 'korpm' in args.db_loc.lower():
-        db.loc[db['code']=='1IV7', 'position'] -= 100
+    elif 'k3822' in args.db_loc.lower():
+        dataset = 'k3822'
     elif 'proteingym' in args.db_loc.lower():
         db = db.loc[~db['mutant'].str.contains(':')]
         db['code'] = args.use_code if args.use_code else 'PG00'
@@ -170,6 +193,7 @@ def main(args):
     miss = pd.DataFrame(columns=['code', 'wt', 'pos', 'mut'])
     missing_msas = []
     missing_weights = []
+    extended_msas = []
 
     # iterate through one PDB code at a time, e.g. all sharing the wt structure
     for (code, struct, chain), group in db.groupby(grouper):
@@ -272,6 +296,7 @@ def main(args):
                     f'{code}_{wt_chain}_MSA*_full_cov75_id90.a3m')
                 )
 
+            extended = False
             # if there are multiple files, it is probably because there are
             # regular and extended versions. Use the extended one.
             if len(matching_files) > 1:
@@ -284,7 +309,19 @@ def main(args):
                             internal_path, 
                             args.alignments, 
                             f'{code}_{wt_chain}_MSA_extended.a3m' 
-                        )                             
+                        )
+                        extended_msas.append(code)
+                        extended = True
+                if extended == False:
+                    print(f'Warning! Detected multiple MSAs for {code} {chain}')
+                    print(f'Using {matching_files[-1]}')
+                    orig_msa = os.path.abspath(matching_files[-1])
+                    new_msa = os.path.join(internal_path, args.alignments, 
+                        os.path.basename(orig_msa))
+                    new_msa_full = os.path.join(
+                        internal_path, args.alignments, 
+                        f'{code}_{wt_chain}_MSA.a3m' 
+                    )                            
             elif len(matching_files) == 0:
                 exp = "un" if code not in ["1DXX", "1JL9", "1TIT"] else ""
                 print(f'Did not find an MSA for {code}. This is {exp}expected')
@@ -298,19 +335,37 @@ def main(args):
                 new_msa_full = os.path.join(
                     internal_path, args.alignments, f'{code}_{wt_chain}_MSA.a3m' 
                 )     
+            theta = str(0.01) if origin == 'Viruses' else str(0.2)
             matching_weights = glob.glob(
-                os.path.join(args.weights, f'{code}_*.npy')
+                os.path.join(args.weights, f'{code}_*{theta}.npy')
                 )
-            assert len(matching_weights) <= 1, \
+            assert (len(matching_weights) <= 1 or extended), \
                 f"Expected one file, but found {len(matching_weights)}"
             if len(matching_weights) == 0:
                 print(f'Did not find sequence weights for MSA for {code}')
                 missing_weights.append(code)
                 msa_weights = ''
+            elif extended:
+                match_found = False
+                for match in matching_weights:
+                    if 'extended' in match:
+                        match_found = True
+                        orig_weights = os.path.abspath(match)
+                        msa_weights = os.path.join(internal_path, 'data', 
+                            'preprocessed', 'weights', 
+                            os.path.basename(orig_weights))
+                if not match_found:
+                    print(f'Did not find (extended) sequence weights ' \
+                        +f'for MSA for {code}')
+                    missing_weights.append(code)
+                    msa_weights = ''
             else:
                 orig_weights = os.path.abspath(matching_weights[0])
                 msa_weights = os.path.join(internal_path, 'data', 
-                    'preprocessed', 'weights', os.path.basename(orig_weights))            
+                    'preprocessed', 'weights', os.path.basename(orig_weights))
+                # case where weights could not be generated with the full MSA
+                if 'reduced' in orig_weights:
+                    new_msa_full = new_msa           
         else:
             new_msa = args.use_msa
             msa_weights = os.path.join(internal_path, 'data', 
@@ -343,8 +398,11 @@ def main(args):
                 #pos -= inferred_offset
 
             # get offsets for interconversion between uniprot and pdb positions
-            offset_up, seq_pos, mismatch = utils.get_offsets(
-                wt, pos, dataset, alignment_df)          
+            if code != '2MWA':
+                offset_up, seq_pos, mismatch = utils.get_offsets(
+                    wt, pos, dataset, alignment_df)
+            else:
+                offset_up, seq_pos, mismatch = 0, 1, False    
 
             # '9' is unknown, but it needed to be distinct from residues
             # such as MSE which are only sometimes unknown
@@ -501,7 +559,22 @@ def main(args):
 
         db.to_csv(os.path.join(output_path, DATA_DIR, 's461_mapped.csv'))
 
+    if dataset_outname == 'k3822':
+
+        db = out
+        db_reduced = pd.read_csv(os.path.join
+            (output_path, 'data', 'external_datasets','K2369.csv')
+            ).set_index('uid')
+        print(db.head())
+        print(db_reduced.head())
+        db = db.loc[db_reduced.index]
+        db.to_csv(os.path.join(output_path, DATA_DIR, 'k2369_mapped.csv'))
+        
+
     grouped = out.reset_index(drop=True).reset_index()
+    extended_indices = grouped.loc[
+        grouped['code'].isin(extended_msas)].groupby(
+        ['code', 'chain']).first()['index'].astype(str)
     missing_indices = grouped.loc[
         grouped['code'].isin(missing_msas)].groupby(
         ['code', 'chain']).first()['index'].astype(str)
@@ -509,13 +582,17 @@ def main(args):
         grouped['code'].isin(missing_weights)].groupby(
         ['code', 'chain']).first()['index'].astype(str)
 
+    print('Extended MSAs for', sorted(list(set(extended_msas))))
+    print('Extended MSA indices:')
+    print(','.join(extended_indices))
+
     print('Missing MSAs for', sorted(list(set(missing_msas))))
     print('Missing MSA indices:')
-    print(' '.join(missing_indices))
+    print(','.join(missing_indices))
 
     print('Missing sequence weights for', missing_weights)
     print('Missing sequence weights indices:')
-    print(' '.join(missing_indices_weights))
+    print(','.join(missing_indices_weights))
 
     if args.dataset.lower() == 'ssym':
         inds = sorted(list(
@@ -576,10 +653,12 @@ if __name__=='__main__':
         args.dataset = 's669'
     elif args.dataset.lower() in ['ssym']:
         args.db_loc = './data/external_datasets/ssym.csv'
-    elif args.dataset.lower() in ['korpm', 'korpm_reduced']:
-        args.db_loc = './data/external_datasets/Id25c03_1merNCLB.txt'
-    elif args.dataset.lower() in ['korpm_full']:
-        args.db_loc = './data/external_datasets/Id25c03_1merNCL.txt'
+    elif args.dataset.lower() in ['korpm', 'korpm_reduced', 'k2369', 'k3822']:
+        args.dataset = 'k3822'
+        args.db_loc = './data/external_datasets/Id25c03_1merNCL.txt' #NCLB
+    #elif args.dataset.lower() in ['korpm_full', 'k3822']:
+    #    args.dataset = 'K3822'
+    #    args.db_loc = './data/external_datasets/Id25c03_1merNCL.txt'
     else:
         print('Inferred use of user-created database. Note: this must '
               'contain columns for code, wild_type, position, mutation. '
