@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import requests
 import urllib
+import tempfile
 
 from tqdm import tqdm
 from quantiprot.metrics import aaindex
@@ -37,13 +38,33 @@ def get_sprot_raw_with_retry(uniprot_id, max_retries=5, delay=5):
     raise Exception("Max retries exceeded with HTTP 500 errors.")
 
 
-def run_alistat(alignment_file, alistat_loc, output_loc):
+def run_alistat(alignment_file, alistat_loc, output_loc, n_lines=0):
     print(f'Running AliStat on {alignment_file}')
-    print(output_loc)
-    os.system(
-        f'{os.path.join(alistat_loc, "alistat")} {alignment_file} 6 -t 2 \
-            -o {output_loc}'
-        )
+    # Create a temporary file
+    with tempfile.NamedTemporaryFile(mode='w+', delete=True) as temp_file:
+        # Open the original alignment file
+        with open(alignment_file, 'r') as file:
+            if n_lines != 0:
+                # Read and write only the first n_lines if n_lines is specified
+                for _ in range(n_lines):
+                    line = file.readline()
+                    temp_file.write(line)
+                line = file.readline()
+                while not line.startswith('>'):
+                    temp_file.write(line)
+                    line = file.readline()
+            else:
+                # Read and write all lines if n_lines is 0
+                for line in file:
+                    temp_file.write(line)
+        
+        # Flush written content to disk
+        temp_file.flush()
+
+        # Run alistat on the temporary file
+        alistat_command = f'{os.path.join(alistat_loc, "alistat")} {temp_file.name} 6 -t 2 -o {output_loc}'
+        os.system(alistat_command)
+        print(f'AliStat command: {alistat_command}')
 
 
 def get_column_completeness(filename, column):
@@ -376,8 +397,13 @@ def extract_features(database_loc, path):
     df_out['chg_mut'] = db['mutation'].apply(lambda x: chg[x])
      
     # iterate through each unique wild-type PDB structure
-    for code, group in tqdm(db.groupby('code')):
-        out_loc = os.path.join(path, 'results', code)
+    for (code, chain), group in tqdm(db.groupby(['code', 'chain'])):
+        if 'ssym' in database_loc.lower():
+            code_ = group['wt_code'].head(1).item()
+        else:
+            code_ = code
+
+        out_loc = os.path.join(path, 'data', 'features', f'{code}_{chain}')
         if not os.path.exists(out_loc):
             print('Storing features in new directory')
             os.makedirs(out_loc)
@@ -385,7 +411,7 @@ def extract_features(database_loc, path):
 
         # get the structure and target chain where the mutation is
         pdb_file = group['pdb_file'].head(1).item()
-        target_chain_id = group['chain'].head(1).item()
+        target_chain_id = chain
         alignment_file = group['reduced_msa_file'].head(1).item()
 
         # parse the structure and get its high-level model object
@@ -440,10 +466,19 @@ def extract_features(database_loc, path):
         
         # now iterate through each unique mutation
 
-        run_alistat(
-            alignment_file, args.alistat_loc,
-            os.path.join(out_loc, '')
-            )
+        print(os.path.join(out_loc, ''))
+        
+        if code_ in ['1A0F', '1A5E', '1BA3', '1CEY', '1FH5', '1IGV', '1IHB', '1IOJ', '1JLV', '1LVE', 
+            '1SUP', '1TIT', '1XWS', '2IMM', '2MMX', '2PR5', '2TRX', '3DV0', '3MBP', '451C', '6TQ3']:
+            run_alistat(
+                alignment_file, args.alistat_loc,
+                os.path.join(out_loc, ''), 100000
+                )           
+        else:
+            run_alistat(
+                alignment_file, args.alistat_loc,
+                os.path.join(out_loc, ''), 0
+                )
 
         for uid, row in group.iterrows():
             df_out.at[uid, 'structure_length'] = len(pdb_seq)
@@ -574,5 +609,5 @@ if __name__=='__main__':
     out = feat_2.merge(dssp, on=['code', 'wild_type', 'position'], how='left')
 
     fname = os.path.basename(args.db_loc)
-    outloc = os.path.join(args.output_root, 'data', 'features', fname.replace('_mapped.csv', '_mapped_feats.csv'))
+    outloc = os.path.join(args.output_root, 'data', 'features', fname.replace('.csv', '_feats.csv'))
     out.to_csv(outloc) 

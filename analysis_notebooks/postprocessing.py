@@ -11,10 +11,9 @@ from Bio import SeqIO
 
 ### STAGE 1: append Rosetta predictions to inference files ###
 # open each of the main dataset inference files
-for file1 in ['./data/inference/s461_mapped_preds.csv',
+for file1 in ['./data/inference/s669_mapped_preds.csv',
               './data/inference/ssym_mapped_preds.csv',
-              './data/inference/korpm_mapped_preds.csv',
-              './data/inference/korpm_full_mapped_preds.csv', 
+              './data/inference/K3822_mapped_preds.csv', 
               './data/inference/q3421_mapped_preds.csv',
               './data/inference/fireprot_mapped_preds.csv']:  
 
@@ -25,7 +24,6 @@ for file1 in ['./data/inference/s461_mapped_preds.csv',
     # two entries get inexplicably duplicated in korpm datasets
     # but only two inconsequential columns are different
     db = db.loc[~db.index.duplicated(keep='last')]
-
     db['uid2'] = db['code'] + '_' + db['position'].fillna(-1000000).astype(int).astype(str) + db['mutation']
     
     db2 = pd.read_csv(file1.replace('_preds', '').replace('inference', 'preprocessed'), index_col=0)
@@ -50,7 +48,7 @@ for file1 in ['./data/inference/s461_mapped_preds.csv',
     # extract the runtimes for methods that have it (not currently used)
     db_runtimes = db_runtimes.reset_index().rename({'uid': 'uid_'}, axis=1).rename({'uid2': 'uid'}, axis=1).set_index('uid')
     # assuming you have designated the repo location as the path
-    df_cart, df_cart_runtimes = analysis_utils.parse_rosetta_predictions(db, os.path.join('..', 'data', 'rosetta_predictions'), runtime=True)
+    df_cart, df_cart_runtimes = analysis_utils.parse_rosetta_predictions(db, os.path.join('.', 'data', 'rosetta_predictions'), runtime=True)
     
     db_mod = db.copy(deep=True)
 
@@ -63,7 +61,17 @@ for file1 in ['./data/inference/s461_mapped_preds.csv',
 
     db_mod.to_csv(file1)
 
-
+    # generate the subset datasets from their full version
+    if dataset == 'k3822':
+        db_mod_reduced = pd.read_csv('./data/preprocessed/k2369_mapped.csv', index_col=0)
+        db_mod = db_mod.loc[db_mod_reduced.index.unique(), :]
+        db_mod.to_csv('./data/inference/k2369_mapped_preds.csv')
+        print('db_mod_reduced:', len(db_mod))
+    elif dataset == 's669':
+        db_mod_reduced = pd.read_csv('./data/preprocessed/s461_mapped.csv', index_col=0)
+        db_mod = db_mod.loc[db_mod_reduced.index.unique(), :]
+        db_mod.to_csv('./data/inference/s461_mapped_preds.csv')
+        print('db_mod_reduced:', len(db_mod))
 
 
 ### STAGE 2: Compute all pairs of structures and sequences (for running FATCAT and MMSeqs2) ###
@@ -74,17 +82,19 @@ fireprot = pd.read_csv('./data/preprocessed/fireprot_mapped.csv', index_col=0)
 s669 = pd.read_csv('./data/preprocessed/s669_mapped.csv', index_col=0)
 q3421 = pd.read_csv('./data/preprocessed/q3421_mapped.csv', index_col=0)
 ssym = pd.read_csv('./data/preprocessed/ssym_mapped.csv', index_col=0)
-korpm = pd.read_csv('./data/preprocessed/korpm_full_mapped.csv', index_col=0)
+korpm = pd.read_csv('./data/preprocessed/k3822_mapped.csv', index_col=0)
+cdna = pd.read_csv('./data/external_datasets/cdna117K_mapped.csv', index_col=0)
+rosetta = pd.read_csv('./data/external_datasets/rosetta_mapped.csv', index_col=0)
 
 all_structs = set()
 all_seqs = {}
 
 # add the unique structures from each database to a set
-for df in [fireprot, s669, q3421, korpm]:
+for df in [fireprot, s669, q3421, korpm, cdna, rosetta]:
     df['structure'] = df['code'] + '_' + df['chain']
     for s in df['structure'].unique():
         all_structs.add(s)
-        seq = open(f'../sequences/fasta_wt/{s}_PDB.fa', 'r').readlines()[-1]
+        seq = open(f'./sequences/fasta_wt/{s}_PDB.fa', 'r').readlines()[-1]
         all_seqs.update({s: seq})
 
 # for ssym, we are only going to use the forward (not reverse/mutant) structures 
@@ -92,9 +102,8 @@ for df in [fireprot, s669, q3421, korpm]:
 ssym['structure'] = ssym['wt_code'] + '_' + ssym['chain']
 for s in ssym.loc[ssym['wt_code']==ssym['code']]['structure'].unique():
     all_structs.add(s)
-    seq = open(f'../sequences/fasta_wt/{s}_PDB.fa', 'r').readlines()[-1]
+    seq = open(f'./sequences/fasta_wt/{s}_PDB.fa', 'r').readlines()[-1]
     all_seqs.update({s: seq})
-
 
 sorted_seqs = {key: all_seqs[key] for key in sorted(all_seqs)}
 
@@ -200,14 +209,14 @@ s669 = list(pd.read_csv('./data/preprocessed/s669_mapped.csv')['code'].unique())
 q3421 = list(pd.read_csv('./data/preprocessed/q3421_mapped.csv')['code'].unique())
 ssym = list(pd.read_csv('./data/preprocessed/ssym_mapped.csv')['code'].unique())
 korpm_reduced = list(pd.read_csv('./data/preprocessed/korpm_mapped.csv')['code'].unique())
-korpm_full = list(pd.read_csv('./data/preprocessed/korpm_full_mapped.csv')['code'].unique())
+k3822 = list(pd.read_csv('./data/preprocessed/k3822_mapped.csv')['code'].unique())
 
-datasets = ['fireprot', 's461', 's669', 'q3421', 'ssym', 'korpm', 'korpm_full'] #'s669', 
+datasets = ['fireprot', 's461', 's669', 'q3421', 'ssym', 'korpm', 'k3822'] #'s669', 
 df['datasets_1'] = [[] for _ in range(len(df))]
 df['datasets_2'] = [[] for _ in range(len(df))]
 
 # Iterate over each dataset and update the DataFrame
-for name, codes in zip(datasets, [fireprot, s461, s669, q3421, ssym, korpm_reduced, korpm_full]): #s669,
+for name, codes in zip(datasets, [fireprot, s461, s669, q3421, ssym, korpm_reduced, k3822]): #s669,
     for i in df.index:
         if df.at[i, 'code_1'] in codes:
             df.at[i, 'datasets_1'].append(name)
@@ -236,7 +245,7 @@ def find_cluster(protein, assigned_clusters, threshold=0.01):
             return cluster
     return None
 
-for name, codes in zip(datasets, [fireprot, s461, s669, q3421, ssym, korpm_reduced, korpm_full]):
+for name, codes in zip(datasets, [fireprot, s461, s669, q3421, ssym, korpm_reduced, k3822]):
     df_cur = df.copy(deep=True).loc[df['datasets_1'].astype(str).str.contains(f"\'{name}\'")]
     df_cur = df_cur.loc[df['datasets_2'].astype(str).str.contains(f"\'{name}\'")]
     #df_cur = df_cur.loc[df['Similarity (%)']>50]
@@ -326,9 +335,9 @@ tmp = pd.read_csv(f'./data/inference/korpm_mapped_preds_clusters.csv', index_col
 tmp = tmp[[c for c in tmp.columns if not 'overlaps_seq' in c]]
 tmp.to_csv(f'./data/inference/korpm_mapped_preds_clusters.csv')
 
-tmp = pd.read_csv(f'./data/inference/korpm_full_mapped_preds_clusters.csv', index_col=0)
+tmp = pd.read_csv(f'./data/inference/k3822_mapped_preds_clusters.csv', index_col=0)
 tmp = tmp[[c for c in tmp.columns if not 'overlaps_seq' in c]]
-tmp.to_csv(f'./data/inference/korpm_full_mapped_preds_clusters.csv')
+tmp.to_csv(f'./data/inference/k3822_mapped_preds_clusters.csv')
 
 tmp = pd.read_csv(f'./data/inference/q3421_mapped_preds_clusters.csv', index_col=0)
 tmp = tmp[[c for c in tmp.columns if not 'overlaps_seq' in c]]
@@ -343,9 +352,9 @@ homo_struct_table = pd.DataFrame()
 homo_seq_table = pd.DataFrame()
 
 for file1 in ['./data/preprocessed/korpm_mapped.csv', 
-              './data/preprocessed/korpm_full_mapped.csv', 
+              './data/preprocessed/k3822_mapped.csv', 
               './data/external_datasets/rosetta_mapped.csv', 
-              './data/preprocessed/tsuboyama_mapped.csv', 
+              './data/external_datasets/cdna117K_mapped.csv', 
               './data/preprocessed/fireprot_mapped.csv', 
               './data/preprocessed/q3421_mapped.csv',
               './data/preprocessed/s461_mapped.csv',
@@ -363,9 +372,9 @@ for file1 in ['./data/preprocessed/korpm_mapped.csv',
     train_codes = set(df_train['code'])
     name1 = file1.split('/')[-1].split('_mapped')[0]
     for file2 in ['./data/preprocessed/korpm_mapped.csv', 
-                  './data/preprocessed/korpm_full_mapped.csv', 
+                  './data/preprocessed/k3822_mapped.csv', 
                   './data/external_datasets/rosetta_mapped.csv', 
-                  './data/preprocessed/tsuboyama_mapped.csv', 
+                  './data/external_datasets/cdna117K_mapped.csv', 
                   './data/preprocessed/fireprot_mapped.csv', 
                   './data/preprocessed/q3421_mapped.csv',
                   './data/preprocessed/s461_mapped.csv',
@@ -435,13 +444,13 @@ for file1 in ['./data/preprocessed/korpm_mapped.csv',
                 tmp = tmp.join(df_train[[f'overlaps_seq_{name2_}']])
                 tmp.to_csv('./data/inference/korpm_mapped_preds_clusters.csv')
 
-            if 'korpm_full' == name1:
+            if 'k3822' == name1:
                 name2_ = name2
                 df_train[f'overlaps_seq_{name2_}'] = False
                 df_train.loc[df_train['code'].isin(overlap_seq), f'overlaps_seq_{name2_}'] = True
-                tmp = pd.read_csv('./data/inference/korpm_full_mapped_preds_clusters.csv', index_col=0)
+                tmp = pd.read_csv('./data/inference/k3822_mapped_preds_clusters.csv', index_col=0)
                 tmp = tmp.join(df_train[[f'overlaps_seq_{name2_}']])
-                tmp.to_csv('./data/inference/korpm_full_mapped_preds_clusters.csv')
+                tmp.to_csv('./data/inference/k3822_mapped_preds_clusters.csv')
 
 id_table.to_csv('./data/homology/id_table.csv')
 homo_struct_table.index.name = 'Overlapping Entries'
@@ -457,7 +466,7 @@ homo_seq_table.to_csv('./data/homology/sequence_homology_table.csv')
 for file1 in ['./data/inference/s461_mapped_preds_clusters.csv',
               './data/inference/ssym_mapped_preds_clusters.csv',
               './data/inference/korpm_mapped_preds_clusters.csv', 
-              './data/inference/korpm_full_mapped_preds_clusters.csv',
+              './data/inference/k3822_mapped_preds_clusters.csv',
               './data/inference/q3421_mapped_preds_clusters.csv',
               './data/inference/fireprot_mapped_preds_clusters.csv']:  
 
@@ -469,19 +478,19 @@ for file1 in ['./data/inference/s461_mapped_preds_clusters.csv',
     # since s461 is a subset of s669, can just use calcs for s669
         dataset_ = 's669'
     if dataset == 'korpm':
-        dataset_ = 'korpm_full'
+        dataset_ = 'k3822'
  
     db = pd.read_csv(file1).set_index(['uid', 'uid2'])
     
-    # load effective number of sequences from separate file (generated by MSA transformer)
-    neff = pd.read_csv(os.path.join('..', 'data', 'features', f'neff_{dataset_.replace("_full", "")}.csv'), header=None, index_col=0)
+    # load effective number of sequences from separate file (generated by subsample_one.py)
+    neff = pd.read_csv(os.path.join('.', 'data', 'features', f'neff_{dataset_}.csv'), header=None, index_col=0)
     neff.index.name = 'code'
     neff.columns = ['neff', 'sequence_length']
 
     # neff file was generated with different sized alignments, the largest in terms of Neff was used
     neff = neff.groupby(level=0).max()
 
-    db_feats = pd.read_csv(os.path.join('..', 'data', 'features', f'{dataset_}_local_mapped_feats.csv'))
+    db_feats = pd.read_csv(os.path.join('.', 'data', 'features', f'{dataset_}_local_mapped_feats.csv'))
     db_feats['uid'] = db_feats['code'] + '_' + db_feats['position_orig'].astype(str) + db_feats['mutation']
     db_feats['uid2'] = db_feats['code'] + '_' + db_feats['position'].fillna(-1000000).astype(int).astype(str) + db_feats['mutation']
 
@@ -496,6 +505,7 @@ for file1 in ['./data/inference/s461_mapped_preds_clusters.csv',
     db_feats['delta_chg'] = db_feats['chg_mut'] - db_feats['chg_wt']
     db_feats['to_proline'] = (db_feats.reset_index('uid2').index.str[-1] == 'P').astype(int)
     db_feats['to_glycine'] = (db_feats.reset_index('uid2').index.str[-1] == 'G').astype(int)
+    db_feats['to_alanine'] = (db_feats.reset_index('uid2').index.str[-1] == 'A').astype(int)
     db_feats['from_proline'] = (db_feats.reset_index('uid2').index.str[6] == 'P').astype(int)
     db_feats['from_glycine'] = (db_feats.reset_index('uid2').index.str[6] == 'G').astype(int)
     db_feats['helix'] = db_feats['SS'] == 'H'
@@ -507,11 +517,13 @@ for file1 in ['./data/inference/s461_mapped_preds_clusters.csv',
 
     db_feats = db_feats.drop(['kdh_wt', 'kdh_mut', 'vol_wt', 'vol_mut', 'chg_wt', 'chg_mut', 'features', 'SS'], axis=1)
     db_feats = db_feats.reset_index().merge(neff['neff'].dropna(), on='code', how='left').drop('code', axis=1).set_index(['uid', 'uid2'])
+
     db_feats['neff'] = db_feats['neff'].fillna(0)
+    db_feats['log_neff'] = np.log(db_feats['neff'])
     #unique_indices = db_feats.groupby('uid')['neff'].idxmax()#.astype(int)
     #db_feats = db_feats.loc[unique_indices].set_index(['uid', 'uid2'])
 
-    for feature in ['on_interface', 'features', 'rel_ASA', 'delta_kdh', 'delta_vol', 'delta_chg', 'to_proline', 'to_glycine', 'from_proline', 'from_glycine', 'helix', 'bend', 'turn', 'coil', 'strand', 'active_site']:
+    for feature in ['on_interface', 'features', 'rel_ASA', 'delta_kdh', 'delta_vol', 'delta_chg', 'to_proline', 'to_glycine', 'to_alanine', 'from_proline', 'from_glycine', 'helix', 'bend', 'turn', 'coil', 'strand', 'active_site']:
         db_feats = db_feats.rename({feature: feature + '_dir'}, axis=1)
 
     len_db = len(db)
@@ -558,7 +570,7 @@ for file1 in ['./data/inference/s461_mapped_preds_clusters.csv',
         #db_ddgs_2 = db_flat[['ddG_dir', 'ddG_inv']]
 
         # merge with Ssym+
-        ssymp = pd.read_csv(os.path.join('..', 'data', 'external_datasets', 'Ssym+_experimental.csv'))
+        ssymp = pd.read_csv(os.path.join('.', 'data', 'external_datasets', 'Ssym+_experimental.csv'))
         ssymp['uid'] = ssymp['Protein'].str[:4].apply(lambda x: x.upper())  + '_' + ssymp['Mut_pdb'].str[1:]
         ssymp = ssymp.set_index('uid')
 
@@ -600,7 +612,7 @@ for file1 in ['./data/inference/s461_mapped_preds_clusters.csv',
         db_full = db_full.reset_index().set_index('uid3')
 
         # preprocess S461 to align with S669
-        s461 = pd.read_csv(os.path.join('..', 'data', 'external_datasets', 'S461.csv'))
+        s461 = pd.read_csv(os.path.join('.', 'data', 'external_datasets', 'S461.csv'))
         s461['uid3'] = s461['PDB'] + '_' + s461['MUT_D'].str[2:]
         s461 = s461.set_index('uid3')
         s461['ddG_I'] = -s461['ddG_D']
@@ -608,9 +620,10 @@ for file1 in ['./data/inference/s461_mapped_preds_clusters.csv',
         s461 = s461.rename({'ddG_D_dir': 'ddG_dir', 'ddG_I_dir': 'ddG_inv'}, axis=1)
 
         # merge S669 with S461 (keeping predictions from both for comparison purposes)
-        db_mod = s461.join(db_full.drop(['PDB_dir', 'MUT_D_dir', 'ddG_dir', 'KORPMD_dir', 'CartddgD_dir',
-            'FoldXD_dir', 'EvoD_dir', 'Dyna2D_dir', 'PopMsD_dir', 'DDGunD_dir',
-            'TNetD_dir', 'ACDCNND_dir', 'ddG_inv'], axis=1), how='left').reset_index(drop=True).set_index(['uid', 'uid2'])
+        db_mod = s461.join(db_full).reset_index(drop=True).set_index(['uid', 'uid2'])
+        #.drop(['PDB_dir', 'MUT_D_dir', 'ddG_dir', 'KORPMD_dir', 'CartddgD_dir',
+        #    'FoldXD_dir', 'EvoD_dir', 'Dyna2D_dir', 'PopMsD_dir', 'DDGunD_dir',
+        #    'TNetD_dir', 'ACDCNND_dir', 'ddG_inv'], axis=1), how='left')
 
     if 'ddG' in db_mod.columns and not 'ddG_dir' in db_mod.columns:
         db_mod['ddG_dir'] = db_mod['ddG']

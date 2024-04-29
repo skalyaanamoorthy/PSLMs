@@ -487,8 +487,11 @@ def align_sequence_structure(code, chain, pdb_ungapped, dataset, mapping_df,
     if dataset != 'fireprot':
         window_start = alignment_df.set_index(
             'chosen_index').at[min_pos, 'sequential_id']
-        window_end = alignment_df.set_index(
-            'chosen_index').at[max_pos, 'sequential_id']
+        if code != '2MWA':
+            window_end = alignment_df.set_index(
+                'chosen_index').at[max_pos, 'sequential_id']
+        else:
+            window_end = 34
         #print(window_start)
         # we now have the start and end of the mutant range, extend it to include 
         # the whole structure

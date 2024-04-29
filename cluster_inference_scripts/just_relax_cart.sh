@@ -14,7 +14,7 @@ module load rosetta
 IFS=','
 mkdir structures_rosetta
 # make sure the path fireprot_unique_muts_offsets.csv is replaced by the actual location
-text=$(cat ./data/fireprot_unique_muts_offsets.csv | head -n $((${SLURM_ARRAY_TASK_ID}+2)) | tail -n 1)
+text=$(cat ./data/preprocessed/korpm_mapped.csv | head -n $((${SLURM_ARRAY_TASK_ID}+2)) | tail -n 1)
 read -a strarr <<< "$text"
 code=${strarr[1]}; echo $code
 chain=${strarr[2]}; echo $chain
