@@ -13,7 +13,7 @@ from Bio import SeqIO
 # open each of the main dataset inference files
 for file1 in ['./data/inference/s669_mapped_preds.csv',
               './data/inference/ssym_mapped_preds.csv',
-              './data/inference/K3822_mapped_preds.csv', 
+              './data/inference/k3822_mapped_preds.csv', 
               './data/inference/q3421_mapped_preds.csv',
               './data/inference/fireprot_mapped_preds.csv']:  
 
@@ -82,7 +82,7 @@ fireprot = pd.read_csv('./data/preprocessed/fireprot_mapped.csv', index_col=0)
 s669 = pd.read_csv('./data/preprocessed/s669_mapped.csv', index_col=0)
 q3421 = pd.read_csv('./data/preprocessed/q3421_mapped.csv', index_col=0)
 ssym = pd.read_csv('./data/preprocessed/ssym_mapped.csv', index_col=0)
-korpm = pd.read_csv('./data/preprocessed/k3822_mapped.csv', index_col=0)
+k2369 = pd.read_csv('./data/preprocessed/k3822_mapped.csv', index_col=0)
 cdna = pd.read_csv('./data/external_datasets/cdna117K_mapped.csv', index_col=0)
 rosetta = pd.read_csv('./data/external_datasets/rosetta_mapped.csv', index_col=0)
 
@@ -90,7 +90,7 @@ all_structs = set()
 all_seqs = {}
 
 # add the unique structures from each database to a set
-for df in [fireprot, s669, q3421, korpm, cdna, rosetta]:
+for df in [fireprot, s669, q3421, k2369, cdna, rosetta]:
     df['structure'] = df['code'] + '_' + df['chain']
     for s in df['structure'].unique():
         all_structs.add(s)
@@ -208,15 +208,15 @@ s461 = list(pd.read_csv('./data/preprocessed/s461_mapped.csv')['code'].unique())
 s669 = list(pd.read_csv('./data/preprocessed/s669_mapped.csv')['code'].unique())
 q3421 = list(pd.read_csv('./data/preprocessed/q3421_mapped.csv')['code'].unique())
 ssym = list(pd.read_csv('./data/preprocessed/ssym_mapped.csv')['code'].unique())
-korpm_reduced = list(pd.read_csv('./data/preprocessed/korpm_mapped.csv')['code'].unique())
+k2369 = list(pd.read_csv('./data/preprocessed/k2369_mapped.csv')['code'].unique())
 k3822 = list(pd.read_csv('./data/preprocessed/k3822_mapped.csv')['code'].unique())
 
-datasets = ['fireprot', 's461', 's669', 'q3421', 'ssym', 'korpm', 'k3822'] #'s669', 
+datasets = ['fireprot', 's461', 's669', 'q3421', 'ssym', 'k2369', 'k3822'] #'s669', 
 df['datasets_1'] = [[] for _ in range(len(df))]
 df['datasets_2'] = [[] for _ in range(len(df))]
 
 # Iterate over each dataset and update the DataFrame
-for name, codes in zip(datasets, [fireprot, s461, s669, q3421, ssym, korpm_reduced, k3822]): #s669,
+for name, codes in zip(datasets, [fireprot, s461, s669, q3421, ssym, k2369, k3822]): #s669,
     for i in df.index:
         if df.at[i, 'code_1'] in codes:
             df.at[i, 'datasets_1'].append(name)
@@ -245,7 +245,7 @@ def find_cluster(protein, assigned_clusters, threshold=0.01):
             return cluster
     return None
 
-for name, codes in zip(datasets, [fireprot, s461, s669, q3421, ssym, korpm_reduced, k3822]):
+for name, codes in zip(datasets, [fireprot, s461, s669, q3421, ssym, k2369, k3822]):
     df_cur = df.copy(deep=True).loc[df['datasets_1'].astype(str).str.contains(f"\'{name}\'")]
     df_cur = df_cur.loc[df['datasets_2'].astype(str).str.contains(f"\'{name}\'")]
     #df_cur = df_cur.loc[df['Similarity (%)']>50]
@@ -331,9 +331,9 @@ seq_ids = seq_ids.loc[seq_ids['identity']>0.25]
 seq_ids = seq_ids.loc[seq_ids['source']!=seq_ids['target']]
 #all_codes = set(seq_ids['source']).union(set(seq_ids['target']))
 
-tmp = pd.read_csv(f'./data/inference/korpm_mapped_preds_clusters.csv', index_col=0)
+tmp = pd.read_csv(f'./data/inference/k2369_mapped_preds_clusters.csv', index_col=0)
 tmp = tmp[[c for c in tmp.columns if not 'overlaps_seq' in c]]
-tmp.to_csv(f'./data/inference/korpm_mapped_preds_clusters.csv')
+tmp.to_csv(f'./data/inference/k2369_mapped_preds_clusters.csv')
 
 tmp = pd.read_csv(f'./data/inference/k3822_mapped_preds_clusters.csv', index_col=0)
 tmp = tmp[[c for c in tmp.columns if not 'overlaps_seq' in c]]
@@ -351,7 +351,7 @@ id_table = pd.DataFrame()
 homo_struct_table = pd.DataFrame()
 homo_seq_table = pd.DataFrame()
 
-for file1 in ['./data/preprocessed/korpm_mapped.csv', 
+for file1 in ['./data/preprocessed/k2369_mapped.csv', 
               './data/preprocessed/k3822_mapped.csv', 
               './data/external_datasets/rosetta_mapped.csv', 
               './data/external_datasets/cdna117K_mapped.csv', 
@@ -371,7 +371,7 @@ for file1 in ['./data/preprocessed/korpm_mapped.csv',
     # just extract the codes (structures) and dataset name
     train_codes = set(df_train['code'])
     name1 = file1.split('/')[-1].split('_mapped')[0]
-    for file2 in ['./data/preprocessed/korpm_mapped.csv', 
+    for file2 in ['./data/preprocessed/k2369_mapped.csv', 
                   './data/preprocessed/k3822_mapped.csv', 
                   './data/external_datasets/rosetta_mapped.csv', 
                   './data/external_datasets/cdna117K_mapped.csv', 
@@ -436,13 +436,13 @@ for file1 in ['./data/preprocessed/korpm_mapped.csv',
                 tmp = tmp.join(df_train[[f'overlaps_seq_{name2_}']])
                 tmp.to_csv('./data/inference/q3421_mapped_preds_clusters.csv')
 
-            if 'korpm' == name1:
+            if 'k2369' == name1:
                 name2_ = name2
                 df_train[f'overlaps_seq_{name2_}'] = False
                 df_train.loc[df_train['code'].isin(overlap_seq), f'overlaps_seq_{name2_}'] = True
-                tmp = pd.read_csv('./data/inference/korpm_mapped_preds_clusters.csv', index_col=0)
+                tmp = pd.read_csv('./data/inference/k2369_mapped_preds_clusters.csv', index_col=0)
                 tmp = tmp.join(df_train[[f'overlaps_seq_{name2_}']])
-                tmp.to_csv('./data/inference/korpm_mapped_preds_clusters.csv')
+                tmp.to_csv('./data/inference/k2369_mapped_preds_clusters.csv')
 
             if 'k3822' == name1:
                 name2_ = name2
@@ -465,7 +465,7 @@ homo_seq_table.to_csv('./data/homology/sequence_homology_table.csv')
 # open each of the main dataset inference files
 for file1 in ['./data/inference/s461_mapped_preds_clusters.csv',
               './data/inference/ssym_mapped_preds_clusters.csv',
-              './data/inference/korpm_mapped_preds_clusters.csv', 
+              './data/inference/k2369_mapped_preds_clusters.csv', 
               './data/inference/k3822_mapped_preds_clusters.csv',
               './data/inference/q3421_mapped_preds_clusters.csv',
               './data/inference/fireprot_mapped_preds_clusters.csv']:  
@@ -477,7 +477,7 @@ for file1 in ['./data/inference/s461_mapped_preds_clusters.csv',
     if dataset == 's461':
     # since s461 is a subset of s669, can just use calcs for s669
         dataset_ = 's669'
-    if dataset == 'korpm':
+    if dataset == 'k2369':
         dataset_ = 'k3822'
  
     db = pd.read_csv(file1).set_index(['uid', 'uid2'])
@@ -490,7 +490,7 @@ for file1 in ['./data/inference/s461_mapped_preds_clusters.csv',
     # neff file was generated with different sized alignments, the largest in terms of Neff was used
     neff = neff.groupby(level=0).max()
 
-    db_feats = pd.read_csv(os.path.join('.', 'data', 'features', f'{dataset_}_local_mapped_feats.csv'))
+    db_feats = pd.read_csv(os.path.join('.', 'data', 'features', f'{dataset_}_mapped_local_feats.csv'))
     db_feats['uid'] = db_feats['code'] + '_' + db_feats['position_orig'].astype(str) + db_feats['mutation']
     db_feats['uid2'] = db_feats['code'] + '_' + db_feats['position'].fillna(-1000000).astype(int).astype(str) + db_feats['mutation']
 

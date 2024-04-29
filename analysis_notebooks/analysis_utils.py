@@ -3556,16 +3556,22 @@ def compare_distributions_boxes(dfs, shared_columns=None, sources=None):
     melted_df = scaled_data.melt(id_vars='Source', value_vars=shared_columns)
 
     # Plot a violin plot for each shared column
-    plt.figure(figsize=(20, 10))
-    ax = sns.boxenplot(x='variable', y='value', hue='Source', data=melted_df)
+    plt.figure(figsize=(12, 6))
+    ax = sns.stripplot(x='variable', y='value', hue='Source', data=melted_df, dodge=True, alpha=0.12, jitter=0.3)
+    #ax = sns.boxenplot(x='variable', y='value', hue='Source', data=melted_df)
     #ax = sns.violinplot(x='variable', y='value', hue='Source', data=melted_df, split=True, bw=0.1, inner='quart')
 
     # Enhance annotations and place legend outside
     plt.title('Feature Distributions Comparison')
     plt.xlabel('Feature')
     plt.ylabel('Normalized Value')
-    plt.xticks(rotation=45)  # Rotate x-axis labels for readability
-    ax.legend(title='Source', loc='upper left', bbox_to_anchor=(1.05, 1), borderaxespad=0.)
+    plt.xticks(rotation=45, ha='right')  # Rotate x-axis labels for readability
+
+    # Update the alpha for the legend markers
+    legend = ax.legend(title='Source', loc='upper left', bbox_to_anchor=(1.05, 1), borderaxespad=0.)
+    for lh in legend.legendHandles: 
+        lh.set_alpha(1)
+        lh.set_linewidth(2) 
 
     # Annotate min and max values for each feature correctly within the scaled context and draw zero lines
     for i, col in enumerate(shared_columns):
