@@ -195,6 +195,13 @@ You can also use a custom database for inference. The preprocessing script will 
 
 `python preprocessing/preprocess.py --dataset MY_CUSTOM_NAME --db_loc ./data/my_custom_dataset.csv`
 
+If you want to regenerate the MSAs, you can use the scripts found in preprocessing:
+* `jackhmmer_bigmem.sh` to generate the MSAs (one dataset at a time, requires the preprocessed database and the UniRef100 database)
+* `reformat_msas.sh` changes from the Stockholm format of JackHMMER to a3m used by MSA Transformer and Tranception. Also performs filtering by coverage and identity for MSA Transformer
+* `generate_msa_weights.sh` creates the sequence weights used by Tranception
+
+Make sure your MSAs match the expected location designated in the data/preprocessed/{dataset}_mapped.csv file so that they can be used by MSA Transformer and Tranception. Again, for MSA Transformer, you need to generate subsampled alignments with using inference_scripts/subsample_one.py (according to the template given in cluster inference scripts).
+
 ## Running Inference
 
 **Note: you MUST run the preprocessing scripts to generate the correct file mappings for your system, or else always run inference from the root of the repo. If you run into problems with missing files when running inference, this is probably why. You also need to install requirements_inference.txt**
