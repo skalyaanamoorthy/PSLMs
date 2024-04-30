@@ -25,7 +25,7 @@ def subsample(infile, nseqs, reps, dataset, neff_only):
         aln = align.Alignment.from_file(open(infile, 'r'), format='a3m')
         aln.set_weights()
         print('Example weights', aln.weights[:10])
-        with open(os.path.join(os.path.dirname(os.path.dirname(infile)), f'neff_{dataset}.csv'), 'a') as f:
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(infile))), 'features', f'neff_{dataset}.csv'), 'a') as f:
             f.write(f"{infile.split('/')[-1].split('_')[0]},{sum(aln.weights)},{len(aln[0])}\n")
         outfolder = os.path.join(os.path.dirname(infile), 'subsampled')
         if os.path.exists(os.path.join(outfolder, infile.split('/')[-1].replace('.a3m', f'_reduced_subsampled_0.a3m'))):
