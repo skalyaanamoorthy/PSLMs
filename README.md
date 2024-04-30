@@ -45,7 +45,7 @@ The sections after general setup are for reproducing the experiments starting fr
 
 ## General Setup
 
-We provide the processed predictions for Q3421, FireProtDB, Ssym and S461 in `./data/inference/{dataset}_mapped_preds.csv`. However, to reproduce the predictions you can follow the below sections for preprocessing and inference. We also provide the pre-extracted features for analysis in the corresponding `./data/features/{dataset}_mapped_feats.csv` files, but you can reproduce those according to the feature analysis section.
+We provide the processed predictions for Q3421, FireProtDB, Ssym and S461 in `./data/analysis/{dataset}_analysis.csv`. However, to reproduce the predictions you can follow the below sections for preprocessing and inference. We also provide the pre-extracted features for analysis in the corresponding `./data/features/{dataset}_mapped_local_feats.csv` files, but you can reproduce those according to the feature analysis section. They are already integrated into the analysis csvs.
 
 Clone the repository:
 
