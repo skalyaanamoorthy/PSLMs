@@ -233,4 +233,8 @@ Finally, you can run the following to compute the features.
 
 `python3 preprocessing/compute_features.py --alistat_loc YOUR_ALISTAT_INSTALLATION`
 
-It is expected that there will be some errors in computing features. However, if you see that DSSP did not produce an output, this is an issue with the DSSP version. Make sure you have version 4, or else install via github. AliStats might fail for large alignments if you do not have enough RAM. Remember that the features have been pre-computed for your convience as stated above, and any missing features can be handled by merging dataframes.
+It is expected that there will be some errors in computing features. However, if you see that DSSP did not produce an output, this is an issue with the DSSP version. Make sure you have version 4, or else install via github. AliStats might fail for large alignments if you do not have enough RAM; we have read only the first 100,000 lines for large files to try to mitigate this. Remember that the features have been pre-computed for your convience as stated above, and any missing features can be handled by merging with our dataframes.
+
+## Clustering Analysis
+
+## Final Analysis
