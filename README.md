@@ -21,6 +21,7 @@ This repository is for facilitating access to and benchmarking self-supervised d
 * Git LFS (if examining or analyzing reported data, including re-running notebooks)
 * MMSeqs2 (if doing sequence clustering)
 * FATCAT (if doing structure clustering)
+* DSSP (if calculating surface area features for analysis)
 * Rosetta (if doing biophysical stability prediction, used version 2019.21.60746)
 
 # Demo /  Instructions
@@ -97,7 +98,7 @@ Finally, install evcouplings with no dependencies (it is an old package which wi
 
 ## Inference Setup
 
-**Note: you can skip this step to demo results. This is for reproducing predictions.**
+**Note: you can now skip directly to the Analysis step (e.g. running analysis_notebooks contents) to demo results. This is for reproducing predictions.**
 
 If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predictions with the deep learning models.
 
@@ -237,4 +238,44 @@ It is expected that there will be some errors in computing features. However, if
 
 ## Clustering Analysis
 
+Sequence analysis requires mmseqs2, installed via:
+
+`sudo apt install mmseqs2`
+
+Sequence similarity was done using
+
+```
+cd  ./data/homology
+mmseqs createdb ../all_seqs.fasta sequencesDB
+mmseqs createindex sequencesDB tmp --threads 8
+mmseqs search sequencesDB sequencesDB resultDB tmp --threads 8 -s 9.5 -e 0.1
+mmseqs convertalis sequencesDB sequencesDB resultDB result.m8
+```
+
+Structure similarity was done using FATCAT, installed via:
+
+```
+git clone https://github.com/GodzikLab/FATCAT-dist.git
+./Install
+```
+
+Actual hmology searching was done using (after preprocessing)
+
+```
+cd ./structures/single_chains/
+export FATCAT=/home/sareeves/software/FATCAT-dist
+~/software/FATCAT-dist/FATCATMain/FATCATQue.pl timeused ../../data/all_pairs.txt -q > allpair.aln
+```
+
 ## Final Analysis
+
+When new predictions, features, clusters etc. have been created run:
+
+`python3 analysis_notebooks/postprocessing.py`
+
+**Note: you can skip to this point to demo results. As long as you did the Git LFS pull correctly, you already have all the data to see the analysis**
+
+Run any of the analysis notebooks using Jupyter Notebook (tested in VSCode server). Reduce bootstraps if calculations are taking too long.
+
+
+
