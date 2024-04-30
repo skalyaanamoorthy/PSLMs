@@ -45,7 +45,7 @@ The sections after general setup are for reproducing the experiments starting fr
 
 ## General Setup
 
-We provide the processed predictions for Q3421, FireProtDB, Ssym and S461 in `./data/inference/{dataset}_mapped_preds.csv`. However, to reproduce the predictions you can follow the below sections for preprocessing and inference. We also provide the pre-extracted features for analysis in the corresponding `./data/features/{dataset}_mapped_feats.csv` files, but you can reproduce those according to the feature analysis section.
+We provide the processed predictions for Q3421, FireProtDB, Ssym and S461 in `./data/analysis/{dataset}_analysis.csv`. However, to reproduce the predictions you can follow the below sections for preprocessing and inference. We also provide the pre-extracted features for analysis in the corresponding `./data/features/{dataset}_mapped_local_feats.csv` files, but you can reproduce those according to the feature analysis section. They are already integrated into the analysis csvs.
 
 Clone the repository:
 
@@ -233,4 +233,8 @@ Finally, you can run the following to compute the features.
 
 `python3 preprocessing/compute_features.py --alistat_loc YOUR_ALISTAT_INSTALLATION`
 
-It is expected that there will be some errors in computing features. However, if you see that DSSP did not produce an output, this is an issue with the DSSP version. Make sure you have version 4, or else install via github. AliStats might fail for large alignments if you do not have enough RAM. Remember that the features have been pre-computed for your convience as stated above, and any missing features can be handled by merging dataframes.
+It is expected that there will be some errors in computing features. However, if you see that DSSP did not produce an output, this is an issue with the DSSP version. Make sure you have version 4, or else install via github. AliStats might fail for large alignments if you do not have enough RAM; we have read only the first 100,000 lines for large files to try to mitigate this. Remember that the features have been pre-computed for your convience as stated above, and any missing features can be handled by merging with our dataframes.
+
+## Clustering Analysis
+
+## Final Analysis
