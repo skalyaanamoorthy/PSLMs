@@ -15,5 +15,8 @@ then
 else
     export LD_LIBRARY_PATH="\${LD_LIBRARY_PATH}:/usr/lib/modeller10.5/lib/x86_64-intel8"
 fi
+
+export MODINSTALL10v5=/usr/lib/modeller10.5/
+
 EOT
 
