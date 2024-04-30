@@ -153,6 +153,8 @@ For MSA Transformer, you need to generate subsampled alignments with using infer
 
 In order to perform inference you will first need to preprocess the structures and sequences. Follow the above instructions before proceeding.
 
+Note that you will need to preprocess ALL DATASETS to run analysis_notebooks/postprocessing.py without errors.
+
 You will need the following additional tools for preprocessing:
 
 Modeller (for repairing PDB structures): https://salilab.org/modeller/download_installation.html
@@ -272,6 +274,8 @@ export FATCAT=/home/sareeves/software/FATCAT-dist
 When new predictions, features, clusters etc. have been created run:
 
 `python3 analysis_notebooks/postprocessing.py`
+
+Note that you will need to preprocess ALL DATASETS to run analysis_notebooks/postprocessing.py without errors.
 
 **Note: you can skip to this point to demo results. As long as you did the Git LFS pull correctly, you already have all the data to see the analysis**
 
