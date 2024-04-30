@@ -490,7 +490,7 @@ for file1 in ['./data/inference/s461_mapped_preds_clusters.csv',
     # neff file was generated with different sized alignments, the largest in terms of Neff was used
     neff = neff.groupby(level=0).max()
 
-    db_feats = pd.read_csv(os.path.join('.', 'data', 'features', f'{dataset_}_mapped_local_feats.csv'))
+    db_feats = pd.read_csv(os.path.join('.', 'data', 'features', f'{dataset_}_mapped_feats.csv'))
     db_feats['uid'] = db_feats['code'] + '_' + db_feats['position_orig'].astype(str) + db_feats['mutation']
     db_feats['uid2'] = db_feats['code'] + '_' + db_feats['position'].fillna(-1000000).astype(int).astype(str) + db_feats['mutation']
 

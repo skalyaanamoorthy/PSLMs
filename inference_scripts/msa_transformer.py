@@ -20,14 +20,21 @@ collections.Iterable = collections.abc.Iterable
 from evcouplings import align
 
 
-def subsample(infile, nseqs, reps):
+def subsample(infile, nseqs, reps, dataset, neff_only):
+
         aln = align.Alignment.from_file(open(infile, 'r'), format='a3m')
         aln.set_weights()
-        with open(os.path.join(os.path.dirname(os.path.dirname(infile)), 'neff.csv'), 'a') as f:
+        print('Example weights', aln.weights[:10])
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(infile))), 'features', f'neff_{dataset}.csv'), 'a') as f:
             f.write(f"{infile.split('/')[-1].split('_')[0]},{sum(aln.weights)},{len(aln[0])}\n")
         outfolder = os.path.join(os.path.dirname(infile), 'subsampled')
+        if os.path.exists(os.path.join(outfolder, infile.split('/')[-1].replace('.a3m', f'_reduced_subsampled_0.a3m'))):
+            print('Subsampled file already exists! Will not regenerate.')
+            return
+        if neff_only:
+            return
+
         os.makedirs(outfolder, exist_ok=True)
-        print('Example weights', aln.weights[:10])
 
         if len(aln) < nseqs:
             print(len(aln))
@@ -98,14 +105,10 @@ def score_sequences(args):
     flag = False
     with tqdm(total=len(df2['code'].unique())) as pbar:
         for code, group in df2.groupby('code'):
-            #if code != '1TUP':
-            #    continue
-            #    flag = True
-            #if not flag:
-            #    continue
+
             print(code)
             sequence = group.head(1)['uniprot_seq'].item()
-            orig_msa = group.head(1)['msa_file'].item()
+            orig_msa = group.head(1)['reduced_msa_file'].item()
             if args.do_subsampling:
                 try:
                     subsample(orig_msa, nseqs=384, reps=5)
@@ -143,7 +146,9 @@ def score_sequences(args):
                                 oc = -1 -ws
                             else:
                                 oc = -int(ou) -1 -ws
-                            idx = pos + oc
+                            
+                            pos = int(pos)
+                            idx = int(pos + oc)
                             start = time.time()
 
                             batch_converter = alphabet.get_batch_converter()
@@ -152,8 +157,8 @@ def score_sequences(args):
                             batch_labels, batch_strs, batch_tokens = batch_converter(data)
 
                             msa_sequence = data[0][0][1]
+
                             try:
-                                assert sequence[idx] == wt
                                 assert msa_sequence[idx] == wt
                             except AssertionError:
                                 print('Warning: input sequence does not match designated wild-type. ', code, wt, pos, mt)
@@ -170,25 +175,26 @@ def score_sequences(args):
                             score = token_probs[0, 1 + idx, mt_encoded] - token_probs[0, 1 + idx, wt_encoded]
 
                             logps.at[uid, f'msa_{i+1}_dir'] = score.item()
+                            #print(score)
                             logps.at[uid, f'runtime_msa_{i+1}_dir'] = time.time() - start
                         except Exception as e:
                             print(e, code, wt, pos, mt)
                             logps.at[uid, f'msa_{i+1}_dir'] = np.nan
                             logps.at[uid, f'runtime_msa_{i+1}_dir'] = np.nan
             #if not os.path.exists('msa_transformer_preds.csv'):
-            #    logps.dropna(how='all').to_csv('msa_transformer_preds.csv')
+            #    logps.to_csv('msa_transformer_preds.csv')
             #else:
-            #tmp = pd.read_csv('msa_transformer_preds.csv', index_col=0)
-            #tmp = pd.concat([tmp, logps.dropna(how='all')]).drop_duplicates()
-            #tmp.to_csv('msa_transformer_preds.csv')
-            pbar.update(1)
+            #    tmp = pd.read_csv('msa_transformer_preds.csv', index_col=0)
+            #    tmp = pd.concat([tmp, logps.dropna(how='all')]).drop_duplicates()
+            #    tmp.to_csv('msa_transformer_preds.csv')
+            #    pbar.update(1)
                     
     logps['msa_transformer_median_dir'] = logps[[f'msa_{i+1}_dir' for i in range(5)]].median(axis=1)
     logps['msa_transformer_mean_dir'] = logps[[f'msa_{i+1}_dir' for i in range(5)]].mean(axis=1)
     logps['runtime_msa_transformer_median_dir'] = logps[[f'runtime_msa_{i+1}_dir' for i in range(5)]].sum(axis=1)
     logps['runtime_msa_transformer_mean_dir'] = logps['runtime_msa_transformer_median_dir']
     logps.index.name = 'uid'
-    logps.to_csv('msa_transformer_preds_q3421.csv')
+    #logps.to_csv('msa_transformer_preds_logps.csv')
     df = pd.read_csv(args.output, index_col=0)
     df = df.drop([col for col in df.columns if 'msa_' in col and '_dir' in col], axis=1)
     df = df.join(logps)
