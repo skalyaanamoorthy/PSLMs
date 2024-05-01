@@ -45,7 +45,9 @@ The expected installation time for basic functionality is >10 minutes, assuming 
 The sections after general setup are for reproducing the experiments starting from raw data.
 
 ## Docker Setup 
-ℹ️ **This section is the easiest option for running inference and completely reproducing the analyses. If you are only interested in demoing notebooks, proceed to General Setup section**
+ℹ️ **This section is the easiest option for running inference and completely reproducing the analyses.**
+
+⚠️ **If you are only interested in demoing notebooks, proceed to General Setup section**
 
 1. Clone the repository:
 ```
@@ -70,6 +72,7 @@ cd PSLMs
 
 ## General Setup 
 ℹ️ **This section is required for all uses of the repository, if not using Docker.**
+
 ⚠️ **Do not complete this section if using Docker.**
 
 We provide the processed predictions for Q3421, FireProtDB, Ssym and S461 in `./data/analysis/{dataset}_analysis.csv`. However, to reproduce the predictions you can follow the below sections for preprocessing and inference. We also provide the pre-extracted features for analysis in the corresponding `./data/features/{dataset}_mapped_local_feats.csv` files, but you can reproduce those according to the feature analysis section. They are already integrated into the analysis csv files.
@@ -109,7 +112,8 @@ git lfs pull
 ℹ️ **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
 
 ## Inference Setup
-ℹ️ **This section is to install the deep learning libraries and predictive models used to generate the likelihood (or stability) predictions. **
+ℹ️ **This section is to install the deep learning libraries and predictive models used to generate the likelihood (or stability) predictions.**
+
 ⚠️ **Do not complete this section if using Docker.**
 
 If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predictions with the deep learning models.
@@ -155,6 +159,7 @@ If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predi
 
 ## Preprocessing
 ℹ️ **This section is for downloading and preprocessing the structures, sequences, and alignments used for inference.**
+
 ⚠️ **Skip to step 3 if using Docker**
 
 **Note: you can skip this step to demo results. This is for reproducing predictions.**
@@ -212,17 +217,19 @@ Make sure your MSAs match the expected location designated in the data/preproces
 
 ## Running Inference
 ℹ️ **This section shows the general workflow for rendering (likelihood/stability) predictions from one model.**
+
 ⚠️**You MUST run the preprocessing scripts to generate the correct file mappings for your system, or else always run inference from the root of the repo. If you run into problems with missing files when running inference, this is probably why. You also need to install requirements_inference.txt**
 
 1. You can run any of the inference scripts in inference_scripts. Note that ProteinMPNN and Tranception require the location where the GitHub repository was installed as arguments. e.g.:
 `python inference_scripts/mpnn.py --db_loc 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds.csv' --mpnn_loc ./ProteinMPNN --noise '20'`
 
-⚠️ Due to the use of relative paths in the _mapped.csv, you must call inference scripts from the root of the repository! Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
+⚠️ **Due to the use of relative paths in the _mapped.csv, you must call inference scripts from the root of the repository! Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
 
 You can use the template calls from cluster_inference_scripts in order to determine the template for calling each method's wrapper script (they are designed to be called from the cluster_inference_scripts directory, though). If you are running on a cluster, you will likely find it convenient to modify the `cluster_inference_scripts` and directly submit them; they are designed to be submitted from their own folder as the working directory, rather than the root of the repo like all other files. Note that each method will require substantial storage space and network usage to download the model weights on their first run (especially ESM-1V and ESM-15B).
 
 ## Feature Analysis Setup
 ℹ️ **This section calculates features of the data which are used extensively in the analysis notebooks. You can run this section before or after running inference**
+
 ⚠️**You MUST run the preprocessing scripts to generate the correct file mappings for your system**
 
 For analysis based on features, you can compute the features using preprocessing/compute_features.py. Note that the features have been precomputed and appear in `./data/features/{dataset}_mapped_feats.csv`:
@@ -247,6 +254,7 @@ It is expected that there will be some errors in computing features. However, if
 
 ## Clustering Analysis
 ℹ️ **This section is for computing the homology between sequences and structures for the purposes of understanding and mitigating the overlap of training and test sets as well as effectively bootstrapping or computing statistics based on structurally homologous protein families.**
+
 ⚠️ **You will need to preprocess ALL DATASETS including data/external_datasets/cdna117k.csv and rosetta_training_data.csv in order to obtain their sequences and structures if you want them to be included in these homology analyses**
 
 1. Sequence analysis requires mmseqs2, installed via:
@@ -276,7 +284,9 @@ export FATCAT=/home/sareeves/software/FATCAT-dist
 
 ## Final Postprocessing and Analysis
 ℹ️ **This step synthesizes all data computed until this point. At minimum, you need to complete the preprocessing of all datasets for this to work, since it also synthesizes the homology / dataset overlap**
+
 ⚠️**You will need to preprocess ALL DATASETS to run analysis_notebooks/postprocessing.py without errors.** 
+
 ⚠️**It is not recommended to try to run the Jupyter Notebooks from a Docker instance**
 
 1. When new predictions, features, clusters etc. have been created run:
