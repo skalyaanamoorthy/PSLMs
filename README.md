@@ -63,9 +63,11 @@ cd PSLMs
 3. Optionally comment out other software you don't need
 
 4. From the root of the repository (takes ~30 minutes):
+
 `docker build -t pslm .`
 
 5. Run the container with gpu support
+
 `docker run --gpus all -it --rm pslm`
 
 6. **Skip to step 3 of Preprocessing ("Skip to here if using Docker") in this README**
@@ -104,9 +106,11 @@ git lfs pull
 	```
 
 4. You can then install the pip requirements (if only performing inference (not preprocessing and analysis), you can skip this). On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dependencies and load the arrow module instead with `module load arrow`. You will also have to use the --no-deps flag.
+
 `pip install -r requirements.txt`
 
 5. Finally, install evcouplings with no dependencies (it is an old package which will create conflicts):
+
 `pip install evcouplings --no-deps`
 
 ℹ️ ✔️ **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
@@ -123,9 +127,11 @@ If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predi
 2. Install Pytorch according to the instructions: https://pytorch.org/get-started/locally/ . In some cases, it will suffice to `pip install torch`, but you must take care to match your CUDA version. On the ComputeCanada cluster, there may be dependency issues between the numpy and torch versions. In this case, since Modeller cannot be installed anyway, we suggest that preprocessing be performed locally, followed by only installing the requirements_inference on the cluster environment.
 
 3. Finally, you can install the inference-specific requirements (approx 2 minutes total on a GPU):
+
 `pip install -r requirements_inference.txt --no-deps`
 
 4. Install evcouplings separately if you haven't already:
+
 `pip install evcouplings --no-deps`
 
 5. You will also need to install the following inference repositories if you wish to use these specific models:
@@ -143,17 +149,12 @@ If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predi
 	Follow the instructions in the repo to get the Tranception_Large (parameters) binary and config. You do not need to the setup the conda environment.
 	Again, you will need to specify the location of the repository (--tranception_loc) and the model weights (--checkpoint).
 
-	c) KORPM (note: statistical potential, not PSLM):
-
-	`git clone https://github.com/chaconlab/korpm`
-
-	Make sure to have Git LFS in order to obtain the potential maps used by KORPM, otherwise you can download the repository as a .zip and extract it.
-	You will need to compile KORPM with the GCC compiler:
-
-	`cd korpm/sbg`
-
-	`sh ./compile_korpm.sh`
-
+	c) KORPM (note: statistical potential, not PSLM). ⚠️Make sure to have Git LFS in order to obtain the potential maps used by KORPM, otherwise you can download the repository as a .zip and extract it. You will need to compile KORPM with the GCC compiler.
+	```
+	git clone https://github.com/chaconlab/korpm
+	cd korpm/sbg
+	sh ./compile_korpm.sh
+ 	```
 	Like the above methods, there is a wrapper script in inference_scripts where you will need to specify the installation directory with the argument --korpm_loc.
 
 
@@ -189,6 +190,7 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 🚩 **Skip to here if using Docker **
 
 3. To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py.  Assuming you are in the base level of the repo, you can call the following:
+
 `python preprocessing/preprocess.py --dataset q3421`
 
 4. Repeat this with the other datasets you intend to run inference on e.g. k3822, s669, s461, fireprot, etc.
@@ -200,9 +202,11 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 * Add the --internal_path argument to specify a different repo location to look for inputs/outputs for the repository where the calculations will be run, for instance if preprocessing locally and then running inference on the cluster
 * Note that the output dataframe `./data/preprocessed/q3421_mapped.csv` is already generated, but the other files are not prepared.
 * You can also use a custom database for inference. The preprocessing script will facilitate making predictions (and MSAs) with all methods by collecting the corresponding UniProt sequence (if available) as well as modelling, preprocessing, and validating all structures as required. To use this functionality, you can create a csv file with columns for code (PDB ID) chain (chain in PDB structure), wild_type (one letter code for wild-type identity at mutated position), position (corresponds to the PDB-designated index), and mutation (one-letter code), with as many rows as desired. Then run preprocessing pointing to the database and giving it a desired name which will appear in the prefix:
+
 `python preprocessing/preprocess.py --dataset MY_CUSTOM_NAME --db_loc ./data/my_custom_dataset.csv`
 
 For example, to preprocess the cdna117k set included in the external data:
+
 `python preprocessing/preprocess.py --db_loc ./data/external_datasets/cdna117K.csv --dataset cdna117k --indexer sequential_id`
 Where the --indexer argument is used to indicate that the index is this dataset is derived from the position in the corresponding sequence, rather than the default choice, which would be the pdb_id
 
@@ -221,6 +225,7 @@ Make sure your MSAs match the expected location designated in the data/preproces
 ⚠️**You MUST run the preprocessing scripts to generate the correct file mappings for your system, or else always run inference from the root of the repo. If you run into problems with missing files when running inference, this is probably why. You also need to install requirements_inference.txt**
 
 1. You can run any of the inference scripts in inference_scripts. Note that ProteinMPNN and Tranception require the location where the GitHub repository was installed as arguments. e.g.:
+
 `python inference_scripts/mpnn.py --db_loc 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds.csv' --mpnn_loc ./ProteinMPNN --noise '20'`
 
 ⚠️ **Due to the use of relative paths in the _mapped.csv, you must call inference scripts from the root of the repository! Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
@@ -243,11 +248,14 @@ make
 ```
 
 2. DSSP (for extracting secondary structure and residue accessibility): https://github.com/cmbi/dssp
+
 `sudo apt install dssp`
 OR
+
 `git clone https://github.com/cmbi/dssp` and follow instructions.
 
 3. Finally, you can run the following to compute the features. 
+
 `python3 preprocessing/compute_features.py --alistat_loc ./AliStat`
 
 It is expected that there will be some errors in computing features. However, if you see that DSSP did not produce an output, this is an issue with the DSSP version. Make sure you have version 4, or else install via GitHub. AliStat might fail for large alignments if you do not have enough RAM; we have read only the first 100,000 lines for large files to try to mitigate this. Remember that the features have been pre-computed for your convience as stated above, and any missing features can be handled by merging with our dataframes.
@@ -258,6 +266,7 @@ It is expected that there will be some errors in computing features. However, if
 ⚠️ **You will need to preprocess ALL DATASETS including data/external_datasets/cdna117k.csv and rosetta_training_data.csv in order to obtain their sequences and structures if you want them to be included in these homology analyses**
 
 1. Sequence analysis requires mmseqs2, installed via:
+
 `sudo apt install mmseqs2`
 
 2. Sequence similarity was done using
