@@ -86,6 +86,7 @@ git lfs pull
 ```
 
 3. Setup the virtual environment using either a) conda or b) VirtualEnv. *If you have root permissions (ability to sudo) you should use conda, as it will make future steps faster and easier. Otherwise you can use VirtualEnv.
+   
 	a) If you choose to use conda: To install with conda on a cluster, you might need to `module load anaconda` and/or `module load python` first. Then:
 	```
 	conda create --name pslm python=3.8
