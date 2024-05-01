@@ -47,7 +47,7 @@ The sections after general setup are for reproducing the experiments starting fr
 ### Docker Setup 
 ℹ️ **This section is the easiest option for running inference and completely reproducing the analyses.**
 
-⚠️⏬ **If you are only interested in demoing notebooks, proceed to General Setup section.**
+⚠️⏬ **If you are only interested in demoing notebooks, skip to the General Setup section.**
 
 1. Clone the repository:
 ```
@@ -75,7 +75,7 @@ cd PSLMs
 ### General Setup 
 ℹ️ **This section is required for all uses of the repository, if not using Docker.**
 
-⚠️ **Do not complete this section if using Docker.**
+⚠️⏬ **Skip to the preprocessing section if using Docker.**
 
 We provide the processed predictions for Q3421, FireProtDB, Ssym and S461 in `./data/analysis/{dataset}_analysis.csv`. However, to reproduce the predictions you can follow the below sections for preprocessing and inference. We also provide the pre-extracted features for analysis in the corresponding `./data/features/{dataset}_mapped_local_feats.csv` files, but you can reproduce those according to the feature analysis section. They are already integrated into the analysis csv files.
 
@@ -118,7 +118,7 @@ git lfs pull
 ### Inference Setup
 ℹ️ **This section is to install the deep learning libraries and predictive models used to generate the likelihood (or stability) predictions.**
 
-⚠️ **Do not complete this section if using Docker.**
+⚠️⏬ **Skip to the preprocessing section if using Docker.**
 
 If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predictions with the deep learning models.
 
@@ -151,7 +151,7 @@ If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predi
 	Follow the instructions in the repo to get the Tranception_Large (parameters) binary and config. You do not need to the setup the conda environment.
 	Again, you will need to specify the location of the repository (--tranception_loc) and the model weights (--checkpoint).
 
-	c) KORPM (note: statistical potential, not PSLM). ⚠️Make sure to have Git LFS in order to obtain the potential maps used by KORPM, otherwise you can download the repository as a .zip and extract it. You will need to compile KORPM with the GCC compiler.
+	c) KORPM (note: statistical potential, not PSLM). ⚠️ Make sure to have Git LFS in order to obtain the potential maps used by KORPM, otherwise you can download the repository as a .zip and extract it. You will need to compile KORPM with the GCC compiler.
 	```
 	git clone https://github.com/chaconlab/korpm
 	cd korpm/sbg
@@ -192,7 +192,7 @@ unzip ./data/preprocessed/msas.zip -d ./data/preprocessed/msas
 unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights 
 ```
 
-🚩 **Skip to here if using Docker **
+🚩 **Skip to here if using Docker**
 
 3. To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py.  Assuming you are in the base level of the repo, you can call the following:
 
@@ -227,11 +227,11 @@ Where the --indexer argument is used to indicate that the index is this dataset 
 Make sure your MSAs match the expected location designated in the data/preprocessed/{dataset}_mapped.csv file so that they can be used by MSA Transformer and Tranception. Again, for MSA Transformer, you need to generate subsampled alignments with using inference_scripts/subsample_one.py (according to the template given in cluster inference scripts).
 
 ## Feature Generation
-ℹ️ **This subsection calculates features of the data which are used extensively in the analysis notebooks. You can run this section before or after running inference**
+ℹ️ **This subsection calculates features of the data which are used extensively in the analysis notebooks. You can run this section before or after running inference.**
 
-⚠️⏬  **This section is NOT required for running inference. You can skip directly to the Inference section if your data has been successfully preprocessed**
+⚠️⏬  **This section is NOT required for running inference. You can skip directly to the Inference section if your data has been successfully preprocessed.**
 
-⚠️**You MUST run the preprocessing scripts to generate the correct file mappings for your system**
+⚠️**You MUST run the preprocessing scripts to generate the correct file mappings for your system.**
 
 For analysis based on features, you can compute the features using preprocessing/compute_features.py. Note that the features have been precomputed and appear in `./data/features/{dataset}_mapped_feats.csv`:
 You will need the following tools to help recompute features:
