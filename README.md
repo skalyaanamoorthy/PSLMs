@@ -49,7 +49,7 @@ The sections after general setup are for reproducing the experiments starting fr
 
 1. Clone the repository:
 ```
-git clone https://github.com/skalyaanamoorthy/PSLMs.git`
+git clone https://github.com/skalyaanamoorthy/PSLMs.git
 cd PSLMs
 ```
 2. Inspect the Dockerfile. The Modeller download section in particular depends on your system architecture.
@@ -67,7 +67,7 @@ cd PSLMs
 5. Run the container with gpu support
 `docker run --gpus all -it --rm pslm`
 
-**6. Skip to "Skip to here if using Docker" in this README**
+6. **Skip to step 3 of Preprocessing ("Skip to here if using Docker") in this README**
 
 ## General Setup 
 ### (Do this if demoing notebooks only. Otherwise, it is recommended to use Docker)
@@ -76,46 +76,32 @@ We provide the processed predictions for Q3421, FireProtDB, Ssym and S461 in `./
 
 1. Clone the repository:
 ```
-git clone https://github.com/skalyaanamoorthy/PSLMs.git`
+git clone https://github.com/skalyaanamoorthy/PSLMs.git
 cd PSLMs
 ```
 
 2. If you want to also download all associated data, you may need to obtain GitLFS. Then:
+```
+git lfs install --skip-smudge
+git lfs pull
+```
 
- `git lfs install --skip-smudge`
+3. Setup the virtual environment using either a) conda or b) VirtualEnv. *If you have root permissions (ability to sudo) you should use conda, as it will make future steps faster and easier. Otherwise you can use VirtualEnv.
 
- `git lfs pull`
-
-You do not need to extract the zip files in data to run the notebooks. However, you will need to extract the msas.zip to compute features, if desired. Precomputed features are included in the data folder.
-
-Next, you need to create the environment. **If you do not have root permissions (ability to sudo) you should use conda, as it will make future steps faster and easier. Otherwise you can use VirtualEnv**.
-
-3.a)
-
-To install with conda, you might need to `module load anaconda` and/or `module load python` first:
+a) If you choose to use conda: To install with conda on a cluster, you might need to `module load anaconda` and/or `module load python` first. Then:
 ```
 conda create --name pslm python=3.8
 conda activate pslm
+conda install -c conda-forge notebook
 ```
-To be able to run the notebooks:
 
-`conda install -c conda-forge notebook`
+b) If you instead choose to use virtualenv: On a cluster, you might need to `module load python` first:
+```
+virtualenv pslm
+source pslm/bin/activate
+```
 
-**If you don't have conda and/or don't have root permissions:**
-
-3.b)
-
-Make a new virual environment instead (tested with Python=3.8). On a cluster, you might need to `module load python` first:
-
-`virtualenv pslm`
-
-`source pslm/bin/activate`
-
-**After setting up either a virtualenv OR conda environment**:
-
-On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dependencies and load the arrow module instead with `module load arrow`. You will also have to use the --no-deps flag.
-
-4. You can then install the pip requirements (if only performing inference (not preprocessing and analysis), you can skip):
+4. You can then install the pip requirements (if only performing inference (not preprocessing and analysis), you can skip this). On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dependencies and load the arrow module instead with `module load arrow`. You will also have to use the --no-deps flag.
 
 `pip install -r requirements.txt`
 
@@ -126,8 +112,7 @@ On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dep
 **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
 
 ## Inference Setup
-
-**Note: you can now skip directly to the Analysis step (e.g. running analysis_notebooks contents) to demo results. This is for reproducing predictions.**
+### Not required if using Docker
 
 If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predictions with the deep learning models.
 
@@ -177,39 +162,27 @@ Like the above methods, there is a wrapper script in inference_scripts where you
 For MSA Transformer, you need to generate subsampled alignments with using inference_scripts/subsample_one.py (according to the template given in cluster inference scripts).
 
 ## Preprocessing
+### Skip to step 3 if using Docker
 
 **Note: you can skip this step to demo results. This is for reproducing predictions.**
 
-In order to perform inference you will first need to preprocess the structures and sequences. Follow the above instructions before proceeding.
+In order to perform inference you will first need to download and preprocess the structures and sequences. Follow the above instructions before proceeding. Note that you will need to preprocess ALL DATASETS including data/external_datasets/cdna117k.csv and rosetta_training_data.csv to run analysis_notebooks/postprocessing.py without errors.
 
-Note that you will need to preprocess ALL DATASETS including data/external_datasets/cdna117k.csv and rosetta_training_data.csv to run analysis_notebooks/postprocessing.py without errors.
+1. Obtain Modeller (for repairing PDB structures): https://salilab.org/modeller/download_installation.html You will need a license, which is free for academic use; follow the download page instructions to make sure it is specified. 
 
-You will need the following additional tools for preprocessing:
+a) Assuming you are using conda:
+```
+conda config --add channels salilab
+conda install modeller
+```
 
-Modeller (for repairing PDB structures): https://salilab.org/modeller/download_installation.html
-
-You will need a license, which is free for academic use; follow the download page instructions to make sure it is specified. 
-
-Assuming you are using conda:
-
-`conda config --add channels salilab`
-
-`conda install modeller`
-
-**If you install using conda, you can skip the following workaround and resume at the python call.**
-
-To make modeller visible to the Python scripts from within the VirtualEnv, you can append to your `./pslm/bin/activate` file following the pattern shown in `convenience_scripts/append_modeller_paths.sh`:
-
+b) Assuming you are using virtualenv:
+* To make modeller visible to the Python scripts from within the VirtualEnv, you can append to your `./pslm/bin/activate` file following the pattern shown in `convenience_scripts/append_modeller_paths.sh`:
 `sh convenience_scripts/append_modeller_paths.sh`
-
 **Ensure to replace the modeller version and system architecture as required (you can find these with `uname` and `uname -m` respectively). Then make sure to restart the virtualenv**:
-
 `source pslm/bin/activate`
 
-To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py. 
-
-**If you intend to use the preprocessed predictions for inference or computing features you MUST unzip the MSAs!
-
+2. Unzip MSAs and weights. MSA Transformer and Tranception require multiple sequence alignments which we have already generated.
 ```
 unzip ./data/preprocessed/msas.zip -d ./data/preprocessed/msas
 unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights 
@@ -217,23 +190,21 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 
 ### Skip to here if using Docker 
 
-Assuming you are in the base level of the repo, you can call the following:
+3. To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py.  Assuming you are in the base level of the repo, you can call the following:
 
 `python preprocessing/preprocess.py --dataset q3421`
 
-You can repeat this with the other datasets you intend to run inference on e.g. k3822, s669, s461, fireprot, etc.
+4. Repeat this with the other datasets you intend to run inference on e.g. k3822, s669, s461, fireprot, etc.
 
-Add the --internal_path argument to specify a different repo location to look for inputs/outputs for the repository where the calculations will be run, for instance if preprocessing locally and then running inference on the cluster
+#### Notes:
 
-Note that the output dataframe `./data/preprocessed/q3421_mapped.csv` is already generated, but the other files are not prepared.
-
-It is expected to see the message '507 observations lost from the original dataset' for FireProtDB, but no observations should be lost for the other datasets. Note that you will also have to do this for S669. S461 is a subset of S669, so you can call either dataset for the `--dataset` argument, and the same preprocessing will occur; the subset will be generated in the analysis notebook. 
-
-You can also use a custom database for inference. The preprocessing script will facilitate making predictions (and MSAs) with all methods by collecting the corresponding UniProt sequence (if available) as well as modelling, preprocessing, and validating all structures as required. To use this functionality, you can create a csv file with columns for code (PDB ID) chain (chain in PDB structure), wild_type (one letter code for wild-type identity at mutated position), position (corresponds to the PDB-designated index), and mutation (one-letter code), with as many rows as desired. Then run preprocessing pointing to the database and giving it a desired name which will appear in the prefix:
+* Add the --internal_path argument to specify a different repo location to look for inputs/outputs for the repository where the calculations will be run, for instance if preprocessing locally and then running inference on the cluster
+* Note that the output dataframe `./data/preprocessed/q3421_mapped.csv` is already generated, but the other files are not prepared.
+* You can also use a custom database for inference. The preprocessing script will facilitate making predictions (and MSAs) with all methods by collecting the corresponding UniProt sequence (if available) as well as modelling, preprocessing, and validating all structures as required. To use this functionality, you can create a csv file with columns for code (PDB ID) chain (chain in PDB structure), wild_type (one letter code for wild-type identity at mutated position), position (corresponds to the PDB-designated index), and mutation (one-letter code), with as many rows as desired. Then run preprocessing pointing to the database and giving it a desired name which will appear in the prefix:
 
 `python preprocessing/preprocess.py --dataset MY_CUSTOM_NAME --db_loc ./data/my_custom_dataset.csv`
 
-If you want to regenerate the MSAs, you can use the scripts found in preprocessing:
+5. If you want to regenerate the MSAs, you can use the scripts found in preprocessing:
 * `jackhmmer_bigmem.sh` to generate the MSAs (one dataset at a time, requires the preprocessed database and the UniRef100 database)
 * `reformat_msas.sh` changes from the Stockholm format of JackHMMER to a3m used by MSA Transformer and Tranception. Also performs filtering by coverage and identity for MSA Transformer
 * `generate_msa_weights.sh` creates the sequence weights used by Tranception
