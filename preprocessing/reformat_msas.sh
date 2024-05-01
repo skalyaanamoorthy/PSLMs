@@ -18,7 +18,7 @@ code=${strarr[1]}; echo $code
 chain=${strarr[2]}; echo $code
 folder=${code}_${chain}
 
-cd ./data/msas
+cd ./data/preprocessed/msas
 name=$folder'_MSA'
 echo 'filtering MSAs'
 

@@ -30,7 +30,7 @@ def score_singlechain_backbones(model, alphabet, args):
         for (code, chain), group in df2.groupby(['code', 'chain']):
                 
                 pdb_file = group['pdb_file'].head(1).item()
-                print(f'Evaluating {code} {chain}')
+                #print(f'Evaluating {code} {chain}')
 
                 coords, native_seq = esm.inverse_folding.util.load_coords(pdb_file, chain)
                 #print('Native sequence loaded from structure file:')
