@@ -47,7 +47,7 @@ The sections after general setup are for reproducing the experiments starting fr
 ## Docker Setup 
 ℹ️ **This section is the easiest option for running inference and completely reproducing the analyses.**
 
-⚠️ **If you are only interested in demoing notebooks, proceed to General Setup section**
+⚠️⏬ **If you are only interested in demoing notebooks, proceed to General Setup section.**
 
 1. Clone the repository:
 ```
@@ -109,7 +109,7 @@ git lfs pull
 5. Finally, install evcouplings with no dependencies (it is an old package which will create conflicts):
 `pip install evcouplings --no-deps`
 
-ℹ️ **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
+ℹ️ ✔️ **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
 
 ## Inference Setup
 ℹ️ **This section is to install the deep learning libraries and predictive models used to generate the likelihood (or stability) predictions.**
@@ -160,7 +160,7 @@ If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predi
 ## Preprocessing
 ℹ️ **This section is for downloading and preprocessing the structures, sequences, and alignments used for inference.**
 
-⚠️ **Skip to step 3 if using Docker**
+⏬🚩 **Skip to step 3 if using Docker**
 
 **Note: you can skip this step to demo results. This is for reproducing predictions.**
 
@@ -186,7 +186,7 @@ unzip ./data/preprocessed/msas.zip -d ./data/preprocessed/msas
 unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights 
 ```
 
-### Skip to here if using Docker 
+🚩 **Skip to here if using Docker **
 
 3. To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py.  Assuming you are in the base level of the repo, you can call the following:
 `python preprocessing/preprocess.py --dataset q3421`
