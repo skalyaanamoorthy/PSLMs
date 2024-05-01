@@ -45,7 +45,7 @@ The expected installation time for basic functionality is >10 minutes, assuming 
 The sections after general setup are for reproducing the experiments starting from raw data.
 
 ## Docker Setup 
-### For running inference and completely reproducing analysis. Skip this if you are just demoing notebooks and processed to General Setup section
+ℹ️ **For running inference and completely reproducing analysis. Skip this if you are just demoing notebooks and processed to General Setup section**
 
 1. Clone the repository:
 ```
@@ -100,67 +100,59 @@ git lfs pull
 	```
 
 4. You can then install the pip requirements (if only performing inference (not preprocessing and analysis), you can skip this). On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dependencies and load the arrow module instead with `module load arrow`. You will also have to use the --no-deps flag.
-
-	`pip install -r requirements.txt`
+`pip install -r requirements.txt`
 
 5. Finally, install evcouplings with no dependencies (it is an old package which will create conflicts):
+`pip install evcouplings --no-deps`
 
-	`pip install evcouplings --no-deps`
-
-**You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
+ℹ️ **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
 
 ## Inference Setup
-### Not required if using Docker
+⚠️ Not required if using Docker
 
 If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predictions with the deep learning models.
 
-Start by installing CUDA if you have not already: https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html. At time of writing you will need to get CUDA 11.X in order to be able to install the torch-* requirements. If you are on a cluster, make sure you have the cuda module loaded e.g. `module load cuda` as well as any compiler necessary e.g. `module load gcc`, `module load rust`. If you are using WSL2, you should be able to just use `sh ./convenience_scripts/cuda_setup_wsl.sh`. MIF-ST also requires cuDNN: https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html.
+1. Start by installing CUDA if you have not already: https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html. At time of writing you will need to get CUDA 11.X in order to be able to install the torch-* requirements. If you are on a cluster, make sure you have the cuda module loaded e.g. `module load cuda` as well as any compiler necessary e.g. `module load gcc`, `module load rust`. If you are using WSL2, you should be able to just use `sh ./convenience_scripts/cuda_setup_wsl.sh`. MIF-ST also requires cuDNN: https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html.
 
-Then install Pytorch according to the instructions: https://pytorch.org/get-started/locally/ . In some cases, it will suffice to `pip install torch`, but you must take care to match your CUDA version. On the ComputeCanada cluster, there may be dependency issues between the numpy and torch versions. In this case, since Modeller cannot be installed anyway, we suggest that preprocessing be performed locally, followed by only installing the requirements_inference on the cluster environment.
+2. Install Pytorch according to the instructions: https://pytorch.org/get-started/locally/ . In some cases, it will suffice to `pip install torch`, but you must take care to match your CUDA version. On the ComputeCanada cluster, there may be dependency issues between the numpy and torch versions. In this case, since Modeller cannot be installed anyway, we suggest that preprocessing be performed locally, followed by only installing the requirements_inference on the cluster environment.
 
-Finally, you can install the inference-specific requirements (approx 2 minutes total on a GPU):
-
+3. Finally, you can install the inference-specific requirements (approx 2 minutes total on a GPU):
 `pip install -r requirements_inference.txt --no-deps`
 
-Install evcouplings separately if you haven't already:
-
+4. Install evcouplings separately if you haven't already:
 `pip install evcouplings --no-deps`
 
-Note that the predictions in ./data/inference/q3421_mapped_preds.csv will be overwritten, but should be identical.
+5. You will also need to install the following inference repositories if you wish to use these specific models:
 
-You will also need to install the following inference repositories if you wish to use these specific models:
+	a) ProteinMPNN:
 
-ProteinMPNN:
-
-`git clone https://github.com/dauparas/ProteinMPNN`
+	`git clone https://github.com/dauparas/ProteinMPNN`
 	
-Note: ProteinMPNN directory will be used as input for ProteinMPNN scripts; it will need to be specified when calling the Python script (--mpnn_loc).
+	Note: ProteinMPNN directory will be used as input for ProteinMPNN scripts; it will need to be specified when calling the Python script (--mpnn_loc).
 
-Tranception:
+	b) Tranception:
 
-`git clone https://github.com/OATML-Markslab/Tranception`
+	`git clone https://github.com/OATML-Markslab/Tranception`
 
-Follow the instructions in the repo to get the Tranception_Large (parameters) binary and config. You do not need to the setup the conda environment.
-Again, you will need to specify the location of the repository (--tranception_loc) and the model weights (--checkpoint).
+	Follow the instructions in the repo to get the Tranception_Large (parameters) binary and config. You do not need to the setup the conda environment.
+	Again, you will need to specify the location of the repository (--tranception_loc) and the model weights (--checkpoint).
 
-KORPM (note: statistical potential, not PSLM):
+	c) KORPM (note: statistical potential, not PSLM):
 
-Make sure to have Git LFS in order to obtain the potential maps used by KORPM, otherwise you can download the repository as a .zip and extract it.
+	`git clone https://github.com/chaconlab/korpm`
 
-`git clone https://github.com/chaconlab/korpm`
+	Make sure to have Git LFS in order to obtain the potential maps used by KORPM, otherwise you can download the repository as a .zip and extract it.
+	You will need to compile KORPM with the GCC compiler:
 
-You will need to compile KORPM with the GCC compiler:
+	`cd korpm/sbg`
 
-`cd korpm/sbg`
+	`sh ./compile_korpm.sh`
 
-`sh ./compile_korpm.sh`
+	Like the above methods, there is a wrapper script in inference_scripts where you will need to specify the installation directory with the argument --korpm_loc.
 
-Like the above methods, there is a wrapper script in inference_scripts where you will need to specify the installation directory with the argument --korpm_loc.
-
-For MSA Transformer, you need to generate subsampled alignments with using inference_scripts/subsample_one.py (according to the template given in cluster inference scripts).
 
 ## Preprocessing
-### Skip to step 3 if using Docker
+⚠️ **Skip to step 3 if using Docker**
 
 **Note: you can skip this step to demo results. This is for reproducing predictions.**
 
@@ -168,17 +160,17 @@ In order to perform inference you will first need to download and preprocess the
 
 1. Obtain Modeller (for repairing PDB structures): https://salilab.org/modeller/download_installation.html You will need a license, which is free for academic use; follow the download page instructions to make sure it is specified. 
 
-a) Assuming you are using conda:
-```
-conda config --add channels salilab
-conda install modeller
-```
+	a) Assuming you are using conda:
+	```
+	conda config --add channels salilab
+	conda install modeller
+	```
 
-b) Assuming you are using virtualenv:
-* To make modeller visible to the Python scripts from within the VirtualEnv, you can append to your `./pslm/bin/activate` file following the pattern shown in `convenience_scripts/append_modeller_paths.sh`:
-`sh convenience_scripts/append_modeller_paths.sh`
-**Ensure to replace the modeller version and system architecture as required (you can find these with `uname` and `uname -m` respectively). Then make sure to restart the virtualenv**:
-`source pslm/bin/activate`
+	b) Assuming you are using virtualenv:
+	* To make modeller visible to the Python scripts from within the VirtualEnv, you can append to your `./pslm/bin/activate` file following the pattern shown in `convenience_scripts/append_modeller_paths.sh`:
+	`sh convenience_scripts/append_modeller_paths.sh`
+	**Ensure to replace the modeller version and system architecture as required (you can find these with `uname` and `uname -m` respectively). Then make sure to restart the virtualenv**:
+	`source pslm/bin/activate`
 
 2. Unzip MSAs and weights. MSA Transformer and Tranception require multiple sequence alignments which we have already generated.
 ```
@@ -189,7 +181,6 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 ### Skip to here if using Docker 
 
 3. To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py.  Assuming you are in the base level of the repo, you can call the following:
-
 `python preprocessing/preprocess.py --dataset q3421`
 
 4. Repeat this with the other datasets you intend to run inference on e.g. k3822, s669, s461, fireprot, etc.
@@ -199,7 +190,6 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 * Add the --internal_path argument to specify a different repo location to look for inputs/outputs for the repository where the calculations will be run, for instance if preprocessing locally and then running inference on the cluster
 * Note that the output dataframe `./data/preprocessed/q3421_mapped.csv` is already generated, but the other files are not prepared.
 * You can also use a custom database for inference. The preprocessing script will facilitate making predictions (and MSAs) with all methods by collecting the corresponding UniProt sequence (if available) as well as modelling, preprocessing, and validating all structures as required. To use this functionality, you can create a csv file with columns for code (PDB ID) chain (chain in PDB structure), wild_type (one letter code for wild-type identity at mutated position), position (corresponds to the PDB-designated index), and mutation (one-letter code), with as many rows as desired. Then run preprocessing pointing to the database and giving it a desired name which will appear in the prefix:
-
 `python preprocessing/preprocess.py --dataset MY_CUSTOM_NAME --db_loc ./data/my_custom_dataset.csv`
 
 5. If you want to regenerate the MSAs, you can use the scripts found in preprocessing:
