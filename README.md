@@ -100,11 +100,9 @@ git lfs pull
 	```
 
 4. You can then install the pip requirements (if only performing inference (not preprocessing and analysis), you can skip this). On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dependencies and load the arrow module instead with `module load arrow`. You will also have to use the --no-deps flag.
-
 `pip install -r requirements.txt`
 
 5. Finally, install evcouplings with no dependencies (it is an old package which will create conflicts):
-
 `pip install evcouplings --no-deps`
 
 **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
