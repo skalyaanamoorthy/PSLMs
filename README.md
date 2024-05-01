@@ -38,14 +38,14 @@ We recommend demoing the more thoroughly documented and tidy analysis_notebooks/
 
 # Installation Guide
 
-Note: only general setup is required to demo code.
+ℹ️ Only general setup is required to demo analysis notebooks.
 
 The expected installation time for basic functionality is >10 minutes, assuming you only install the first requirements.txt. Approximatly 30 minutes would be required to install CUDA / CUDNN / Pytorch and inference_requirements but depends on internet connection. Similarly, installation time for tested models for inference depends on the internet connection speed, as some models are many GiB in size.
 
 The sections after general setup are for reproducing the experiments starting from raw data.
 
 ## Docker Setup 
-ℹ️ **For running inference and completely reproducing analysis. Skip this if you are just demoing notebooks and processed to General Setup section**
+ℹ️ **This section is the easiest option for running inference and completely reproducing the analyses. If you are only interested in demoing notebooks, proceed to General Setup section**
 
 1. Clone the repository:
 ```
@@ -69,9 +69,10 @@ cd PSLMs
 6. **Skip to step 3 of Preprocessing ("Skip to here if using Docker") in this README**
 
 ## General Setup 
-### (Do this if demoing notebooks only. Otherwise, it is recommended to use Docker)
+ℹ️ **This section is required for all uses of the repository, if not using Docker.**
+⚠️ **Do not complete this section if using Docker.**
 
-We provide the processed predictions for Q3421, FireProtDB, Ssym and S461 in `./data/analysis/{dataset}_analysis.csv`. However, to reproduce the predictions you can follow the below sections for preprocessing and inference. We also provide the pre-extracted features for analysis in the corresponding `./data/features/{dataset}_mapped_local_feats.csv` files, but you can reproduce those according to the feature analysis section. They are already integrated into the analysis csvs.
+We provide the processed predictions for Q3421, FireProtDB, Ssym and S461 in `./data/analysis/{dataset}_analysis.csv`. However, to reproduce the predictions you can follow the below sections for preprocessing and inference. We also provide the pre-extracted features for analysis in the corresponding `./data/features/{dataset}_mapped_local_feats.csv` files, but you can reproduce those according to the feature analysis section. They are already integrated into the analysis csv files.
 
 1. Clone the repository:
 ```
@@ -108,7 +109,8 @@ git lfs pull
 ℹ️ **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
 
 ## Inference Setup
-⚠️ Not required if using Docker
+ℹ️ **This section is to install the deep learning libraries and predictive models used to generate the likelihood (or stability) predictions. **
+⚠️ **Do not complete this section if using Docker.**
 
 If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predictions with the deep learning models.
 
@@ -152,6 +154,7 @@ If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predi
 
 
 ## Preprocessing
+ℹ️ **This section is for downloading and preprocessing the structures, sequences, and alignments used for inference.**
 ⚠️ **Skip to step 3 if using Docker**
 
 **Note: you can skip this step to demo results. This is for reproducing predictions.**
@@ -187,12 +190,20 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 
 #### Notes:
 
+---
+
 * Add the --internal_path argument to specify a different repo location to look for inputs/outputs for the repository where the calculations will be run, for instance if preprocessing locally and then running inference on the cluster
 * Note that the output dataframe `./data/preprocessed/q3421_mapped.csv` is already generated, but the other files are not prepared.
 * You can also use a custom database for inference. The preprocessing script will facilitate making predictions (and MSAs) with all methods by collecting the corresponding UniProt sequence (if available) as well as modelling, preprocessing, and validating all structures as required. To use this functionality, you can create a csv file with columns for code (PDB ID) chain (chain in PDB structure), wild_type (one letter code for wild-type identity at mutated position), position (corresponds to the PDB-designated index), and mutation (one-letter code), with as many rows as desired. Then run preprocessing pointing to the database and giving it a desired name which will appear in the prefix:
 `python preprocessing/preprocess.py --dataset MY_CUSTOM_NAME --db_loc ./data/my_custom_dataset.csv`
 
-5. If you want to regenerate the MSAs, you can use the scripts found in preprocessing:
+For example, to preprocess the cdna117k set included in the external data:
+`python preprocessing/preprocess.py --db_loc ./data/external_datasets/cdna117K.csv --dataset cdna117k --indexer sequential_id`
+Where the --indexer argument is used to indicate that the index is this dataset is derived from the position in the corresponding sequence, rather than the default choice, which would be the pdb_id
+
+---
+
+5. *(Optional)* If you want to regenerate the MSAs, you can use the scripts found in preprocessing:
 * `jackhmmer_bigmem.sh` to generate the MSAs (one dataset at a time, requires the preprocessed database and the UniRef100 database)
 * `reformat_msas.sh` changes from the Stockholm format of JackHMMER to a3m used by MSA Transformer and Tranception. Also performs filtering by coverage and identity for MSA Transformer
 * `generate_msa_weights.sh` creates the sequence weights used by Tranception
@@ -200,56 +211,48 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 Make sure your MSAs match the expected location designated in the data/preprocessed/{dataset}_mapped.csv file so that they can be used by MSA Transformer and Tranception. Again, for MSA Transformer, you need to generate subsampled alignments with using inference_scripts/subsample_one.py (according to the template given in cluster inference scripts).
 
 ## Running Inference
+ℹ️ **This section shows the general workflow for rendering (likelihood/stability) predictions from one model.**
+⚠️**You MUST run the preprocessing scripts to generate the correct file mappings for your system, or else always run inference from the root of the repo. If you run into problems with missing files when running inference, this is probably why. You also need to install requirements_inference.txt**
 
-**Note: you MUST run the preprocessing scripts to generate the correct file mappings for your system, or else always run inference from the root of the repo. If you run into problems with missing files when running inference, this is probably why. You also need to install requirements_inference.txt**
+1. You can run any of the inference scripts in inference_scripts. Note that ProteinMPNN and Tranception require the location where the GitHub repository was installed as arguments. e.g.:
+`python inference_scripts/mpnn.py --db_loc 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds.csv' --mpnn_loc ./ProteinMPNN --noise '20'`
 
-Then, you can run any of the inference scripts in inference_scripts. You can use the template calls from cluster_inference_scripts in order to determine the template for calling each method's wrapper script (they are designed to be called from the cluster_inference_scripts directory, though). On the other hand, to run ProteinMPNN **from the repository root** with 0.2 Angstrom backbone noise on Q3421, first generate a copy of the mapped mutations to store predictions (optional), then run the inference script:
+⚠️ Due to the use of relative paths in the _mapped.csv, you must call inference scripts from the root of the repository! Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
 
-`cp data/preprocessed/q3421_mapped.csv data/inference/q3421_mapped_preds_copy.csv`
-
-`python inference_scripts/mpnn.py --db_loc 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds_copy.csv' --mpnn_loc ./ProteinMPNN --noise '20'`
-
-**NOTE: Due to the use of relative paths in the _mapped.csv, you must call inference scripts from the root of the repository! Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
-
-If you are running on a cluster, you will likely find it convenient to modify the `cluster_inference_scripts` and directly submit them; they are designed to be submitted from their own folder as the working directory, rather than the root of the repo like all other files. Note that each method will require substantial storage space and network usage to download the model weights on their first run (especially ESM-1V).
-
-Note that ProteinMPNN and Tranception require the location where the GitHub repository was installed as arguments.
+You can use the template calls from cluster_inference_scripts in order to determine the template for calling each method's wrapper script (they are designed to be called from the cluster_inference_scripts directory, though). If you are running on a cluster, you will likely find it convenient to modify the `cluster_inference_scripts` and directly submit them; they are designed to be submitted from their own folder as the working directory, rather than the root of the repo like all other files. Note that each method will require substantial storage space and network usage to download the model weights on their first run (especially ESM-1V and ESM-15B).
 
 ## Feature Analysis Setup
+ℹ️ **This section calculates features of the data which are used extensively in the analysis notebooks. You can run this section before or after running inference**
+⚠️**You MUST run the preprocessing scripts to generate the correct file mappings for your system**
 
 For analysis based on features, you can compute the features using preprocessing/compute_features.py. Note that the features have been precomputed and appear in `./data/features/{dataset}_mapped_feats.csv`:
 You will need the following tools to help recompute features:
 
-AliStat (for getting multiple sequence alignment statistics): https://github.com/thomaskf/AliStat
+1. AliStat (for getting multiple sequence alignment statistics): https://github.com/thomaskf/AliStat
+```
+git clone https://github.com/thomaskf/AliStat
+cd AliStat
+make
+```
 
-`git clone https://github.com/thomaskf/AliStat`
-
-`cd AliStat`
-
-`make`
-
-DSSP (for extracting secondary structure and residue accessibility): https://github.com/cmbi/dssp
-
+2. DSSP (for extracting secondary structure and residue accessibility): https://github.com/cmbi/dssp
 `sudo apt install dssp`
-
 OR
-
 `git clone https://github.com/cmbi/dssp` and follow instructions.
 
-Finally, you can run the following to compute the features. 
+3. Finally, you can run the following to compute the features. 
+`python3 preprocessing/compute_features.py --alistat_loc ./AliStat`
 
-`python3 preprocessing/compute_features.py --alistat_loc YOUR_ALISTAT_INSTALLATION`
-
-It is expected that there will be some errors in computing features. However, if you see that DSSP did not produce an output, this is an issue with the DSSP version. Make sure you have version 4, or else install via github. AliStats might fail for large alignments if you do not have enough RAM; we have read only the first 100,000 lines for large files to try to mitigate this. Remember that the features have been pre-computed for your convience as stated above, and any missing features can be handled by merging with our dataframes.
+It is expected that there will be some errors in computing features. However, if you see that DSSP did not produce an output, this is an issue with the DSSP version. Make sure you have version 4, or else install via GitHub. AliStat might fail for large alignments if you do not have enough RAM; we have read only the first 100,000 lines for large files to try to mitigate this. Remember that the features have been pre-computed for your convience as stated above, and any missing features can be handled by merging with our dataframes.
 
 ## Clustering Analysis
+ℹ️ **This section is for computing the homology between sequences and structures for the purposes of understanding and mitigating the overlap of training and test sets as well as effectively bootstrapping or computing statistics based on structurally homologous protein families.**
+⚠️ **You will need to preprocess ALL DATASETS including data/external_datasets/cdna117k.csv and rosetta_training_data.csv in order to obtain their sequences and structures if you want them to be included in these homology analyses**
 
-Sequence analysis requires mmseqs2, installed via:
-
+1. Sequence analysis requires mmseqs2, installed via:
 `sudo apt install mmseqs2`
 
-Sequence similarity was done using
-
+2. Sequence similarity was done using
 ```
 cd  ./data/homology
 mmseqs createdb ../all_seqs.fasta sequencesDB
@@ -258,32 +261,28 @@ mmseqs search sequencesDB sequencesDB resultDB tmp --threads 8 -s 9.5 -e 0.1
 mmseqs convertalis sequencesDB sequencesDB resultDB result.m8
 ```
 
-Structure similarity was done using FATCAT, installed via:
-
+3. Structure similarity was done using FATCAT, installed via:
 ```
 git clone https://github.com/GodzikLab/FATCAT-dist.git
 ./Install
 ```
 
-Actual hmology searching was done using (after preprocessing)
-
+4. Actual homology searching was done using (after preprocessing)
 ```
 cd ./structures/single_chains/
 export FATCAT=/home/sareeves/software/FATCAT-dist
 ~/software/FATCAT-dist/FATCATMain/FATCATQue.pl timeused ../../data/all_pairs.txt -q > allpair.aln
 ```
 
-## Final Analysis
+## Final Postprocessing and Analysis
+ℹ️ **This step synthesizes all data computed until this point. At minimum, you need to complete the preprocessing of all datasets for this to work, since it also synthesizes the homology / dataset overlap**
+⚠️**You will need to preprocess ALL DATASETS to run analysis_notebooks/postprocessing.py without errors.** 
+⚠️**It is not recommended to try to run the Jupyter Notebooks from a Docker instance**
 
-When new predictions, features, clusters etc. have been created run:
-
+1. When new predictions, features, clusters etc. have been created run:
 `python3 analysis_notebooks/postprocessing.py`
 
-Note that you will need to preprocess ALL DATASETS to run analysis_notebooks/postprocessing.py without errors.
-
-**Note: you can skip to this point to demo results. As long as you did the Git LFS pull correctly, you already have all the data to see the analysis**
-
-Run any of the analysis notebooks using Jupyter Notebook (tested in VSCode server). Reduce bootstraps if calculations are taking too long.
+2. Run any of the analysis notebooks using Jupyter Notebook (tested in VSCode server). Reduce bootstraps if calculations are taking too long.
 
 
 
