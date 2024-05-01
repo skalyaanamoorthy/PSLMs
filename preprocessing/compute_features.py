@@ -64,7 +64,7 @@ def run_alistat(alignment_file, alistat_loc, output_loc, n_lines=0):
         # Run alistat on the temporary file
         alistat_command = f'{os.path.join(alistat_loc, "alistat")} {temp_file.name} 6 -t 2 -o {output_loc}'
         os.system(alistat_command)
-        print(f'AliStat command: {alistat_command}')
+        #print(f'AliStat command: {alistat_command}')
 
 
 def get_column_completeness(filename, column):
@@ -589,7 +589,6 @@ if __name__=='__main__':
 
     db = pd.read_csv(args.db_loc)
     db = db.groupby('uid').first()
-    db['offset_rosetta'] = 0
     
     # preserve original columns but compute for completeness
     db = db.rename({
@@ -607,6 +606,10 @@ if __name__=='__main__':
 
     # combine with DSSP information (SASA and secondary structure)
     out = feat_2.merge(dssp, on=['code', 'wild_type', 'position'], how='left')
+
+    # applies only to 1 mutant of 1ZNJ where two chains have same wt at mut position
+    out = out.drop_duplicates(subset=['code', 'wild_type', 'position', 'mutation'], keep='last')
+    print(len(out))
 
     fname = os.path.basename(args.db_loc)
     outloc = os.path.join(args.output_root, 'data', 'features', fname.replace('.csv', '_feats.csv'))

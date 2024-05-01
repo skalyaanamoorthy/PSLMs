@@ -92,8 +92,14 @@ def get_uniprot(code, chain, SEQUENCES_DIR, uniprot_id=None):
         )
 
         # convert json to Python
-        r = requests.get(req).text.replace('true','True').replace('false','False')
-        r = eval(r)
+        r = requests.get(
+            req).text.replace('true','True').replace('false','False')
+        try:
+            r = eval(r)
+        except Exception as e:
+            print(e)
+            print('It looks like the PDB e-KB might be temporarily down.')
+            print('Please try again later.')
 
     # get specifically the sequence related to the target structure
     try:

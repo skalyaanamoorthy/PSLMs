@@ -16,9 +16,9 @@ code=${strarr[1]}; echo $code
 chain=${strarr[2]}; echo $code
 folder=${code}_${chain}
 
-cd ./data/msas
+cd ./data/preprocessed/msas
 
-name=$(find ../../sequences/fasta_up/ -name $folder.fa)
+name=$(find ../../../sequences/fasta_up/ -name $folder.fa)
 th=$(cat $name | tail -n 1 | wc -m) 
 th=$(( th / 2 ))
 echo $th

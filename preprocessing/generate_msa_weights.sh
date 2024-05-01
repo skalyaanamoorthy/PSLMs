@@ -18,7 +18,7 @@ code=${strarr[1]}; echo $code
 chain=${strarr[2]}; echo $chain
 folder=$code"_"$chain
 
-msa_file='./msas_fireprot_2024/'$folder'_MSA.a2m'
+msa_file='./data/preprocessed/msas/'$folder'_MSA.a2m'
 
 origin=${strarr[-1]}
 echo $origin
