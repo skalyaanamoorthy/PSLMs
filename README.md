@@ -28,9 +28,9 @@ This repository is for facilitating access to and benchmarking self-supervised d
 
 You can use the Jupyter notebooks from the analysis_notebooks folder to reproduce the figures, **modifying the path at the start of the file if needed** and running each cell sequentially. 
 
-The notebooks draw from precomputed features, the original databases from their respective authors, and predictions generated on a high-performance compute cluster (also tested on RTX 3090). All of these data sources are included in the repository, and instructions for reproducing the predictions and features are provided below. 
+In this case, most of the overhead is not needed, just complete the general setup and run the notebooks. They draw from precomputed features, the original databases from their respective authors, and predictions generated on a high-performance compute cluster (also tested on RTX 3090). All of these data sources are included in the repository, and instructions for reproducing the predictions and features are provided below. 
 
-We recommend demoing the more thoroughly documented and tidy analysis_notebooks/Q3421_analysis.ipynb . The expected outputs are shown below the cells. The expected runtimes are often included per-cell, for a total runtime of <5 minutes on a typical PC. To reduce the demo time, the number of bootstrapped replicates have been greatly reduced from those reported in the text. Additionally, the ensemble predictions step has been precomputed and is loaded from a file, but can be easily reproduced by uncommenting the relevant line(s).
+We recommend demoing the more thoroughly documented and tidy analysis_notebooks/q3421_analysis.ipynb . The expected outputs are shown below the cells. The expected runtimes are often included per-cell, for a total runtime of <5 minutes on a typical PC. To reduce the demo time, the number of bootstrapped replicates have been greatly reduced from those reported in the text. Additionally, the ensemble predictions step has been precomputed and is loaded from a file, but can be easily reproduced by uncommenting the relevant line(s).
 
 # Summary Diagram
 
@@ -44,17 +44,43 @@ The expected installation time for basic functionality is >10 minutes, assuming 
 
 The sections after general setup are for reproducing the experiments starting from raw data.
 
-## General Setup
+## Docker Setup 
+### For running inference and completely reproducing analysis. Skip this if you are just demoing notebooks and processed to General Setup section
+
+1. Clone the repository:
+```
+git clone https://github.com/skalyaanamoorthy/PSLMs.git`
+cd PSLMs
+```
+2. Inspect the Dockerfile. The Modeller download section in particular depends on your system architecture.
+   * Modify the wget command according to your compute architecture and operating system (e.g. `uname -m`)
+   * Modify `convenience_scripts/append_modeller_paths.sh` to match
+   * Modify the KEY_MODELLER part of the command to be a valid Modeller license key which can be obtained for free for academic use
+   * Comment out this section if you don't need modeller
+  
+3. Optionally comment out other software you don't need
+
+4. From the root of the repository (takes ~30 minutes):
+`docker build -t pslm .`
+
+
+5. Run the container with gpu support
+`docker run --gpus all -it --rm pslm`
+
+**6. Skip to "Skip to here if using Docker" in this README**
+
+## General Setup 
+### (Do this if demoing notebooks only. Otherwise, it is recommended to use Docker)
 
 We provide the processed predictions for Q3421, FireProtDB, Ssym and S461 in `./data/analysis/{dataset}_analysis.csv`. However, to reproduce the predictions you can follow the below sections for preprocessing and inference. We also provide the pre-extracted features for analysis in the corresponding `./data/features/{dataset}_mapped_local_feats.csv` files, but you can reproduce those according to the feature analysis section. They are already integrated into the analysis csvs.
 
-Clone the repository:
+1. Clone the repository:
+```
+git clone https://github.com/skalyaanamoorthy/PSLMs.git`
+cd PSLMs
+```
 
-`git clone https://github.com/skalyaanamoorthy/PSLMs.git`
-
-`cd PSLMs`
-
-If you want to also download all associated data, you may need to obtain GitLFS. Then:
+2. If you want to also download all associated data, you may need to obtain GitLFS. Then:
 
  `git lfs install --skip-smudge`
 
@@ -64,17 +90,20 @@ You do not need to extract the zip files in data to run the notebooks. However, 
 
 Next, you need to create the environment. **If you do not have root permissions (ability to sudo) you should use conda, as it will make future steps faster and easier. Otherwise you can use VirtualEnv**.
 
+3.a)
+
 To install with conda, you might need to `module load anaconda` and/or `module load python` first:
-
-`conda create --name pslm python=3.8`
-
-`conda activate pslm`
-
+```
+conda create --name pslm python=3.8
+conda activate pslm
+```
 To be able to run the notebooks:
 
 `conda install -c conda-forge notebook`
 
 **If you don't have conda and/or don't have root permissions:**
+
+3.b)
 
 Make a new virual environment instead (tested with Python=3.8). On a cluster, you might need to `module load python` first:
 
@@ -86,11 +115,11 @@ Make a new virual environment instead (tested with Python=3.8). On a cluster, yo
 
 On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dependencies and load the arrow module instead with `module load arrow`. You will also have to use the --no-deps flag.
 
-You can then install the pip requirements (if only performing inference (not preprocessing and analysis), you can skip):
+4. You can then install the pip requirements (if only performing inference (not preprocessing and analysis), you can skip):
 
 `pip install -r requirements.txt`
 
-Finally, install evcouplings with no dependencies (it is an old package which will create conflicts):
+5. Finally, install evcouplings with no dependencies (it is an old package which will create conflicts):
 
 `pip install evcouplings --no-deps`
 
@@ -179,17 +208,20 @@ To make modeller visible to the Python scripts from within the VirtualEnv, you c
 
 To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py. 
 
-**If you intend to use the preprocessed predictions for inference or computing features you MUST unzip the msas! (data/msas.zip)
+**If you intend to use the preprocessed predictions for inference or computing features you MUST unzip the MSAs!
+
+```
+unzip ./data/preprocessed/msas.zip -d ./data/preprocessed/msas
+unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights 
+```
 
 ### Skip to here if using Docker 
----
 
 Assuming you are in the base level of the repo, you can call the following:
 
 `python preprocessing/preprocess.py --dataset q3421`
 
 You can repeat this with the other datasets you intend to run inference on e.g. k3822, s669, s461, fireprot, etc.
----
 
 Add the --internal_path argument to specify a different repo location to look for inputs/outputs for the repository where the calculations will be run, for instance if preprocessing locally and then running inference on the cluster
 
