@@ -181,9 +181,15 @@ To run inference you will need to preprocess the mutants in each database, obtai
 
 **If you intend to use the preprocessed predictions for inference or computing features you MUST unzip the msas! (data/msas.zip)
 
+### Skip to here if using Docker 
+---
+
 Assuming you are in the base level of the repo, you can call the following:
 
 `python preprocessing/preprocess.py --dataset q3421`
+
+You can repeat this with the other datasets you intend to run inference on e.g. k3822, s669, s461, fireprot, etc.
+---
 
 Add the --internal_path argument to specify a different repo location to look for inputs/outputs for the repository where the calculations will be run, for instance if preprocessing locally and then running inference on the cluster
 
