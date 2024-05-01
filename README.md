@@ -63,7 +63,6 @@ cd PSLMs
 4. From the root of the repository (takes ~30 minutes):
 `docker build -t pslm .`
 
-
 5. Run the container with gpu support
 `docker run --gpus all -it --rm pslm`
 
@@ -87,19 +86,17 @@ git lfs pull
 ```
 
 3. Setup the virtual environment using either a) conda or b) VirtualEnv. *If you have root permissions (ability to sudo) you should use conda, as it will make future steps faster and easier. Otherwise you can use VirtualEnv.
-
-a) If you choose to use conda: To install with conda on a cluster, you might need to `module load anaconda` and/or `module load python` first. Then:
-```
-conda create --name pslm python=3.8
-conda activate pslm
-conda install -c conda-forge notebook
-```
-
-b) If you instead choose to use virtualenv: On a cluster, you might need to `module load python` first:
-```
-virtualenv pslm
-source pslm/bin/activate
-```
+	a) If you choose to use conda: To install with conda on a cluster, you might need to `module load anaconda` and/or `module load python` first. Then:
+	```
+	conda create --name pslm python=3.8
+	conda activate pslm
+	conda install -c conda-forge notebook
+	```
+	b) If you instead choose to use virtualenv: On a cluster, you might need to `module load python` first:
+	```
+	virtualenv pslm
+	source pslm/bin/activate
+	```
 
 4. You can then install the pip requirements (if only performing inference (not preprocessing and analysis), you can skip this). On the ComputeCanada cluster, you will have to comment out pyarrow and cmake dependencies and load the arrow module instead with `module load arrow`. You will also have to use the --no-deps flag.
 
