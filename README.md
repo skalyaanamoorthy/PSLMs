@@ -153,7 +153,7 @@ For MSA Transformer, you need to generate subsampled alignments with using infer
 
 In order to perform inference you will first need to preprocess the structures and sequences. Follow the above instructions before proceeding.
 
-Note that you will need to preprocess ALL DATASETS to run analysis_notebooks/postprocessing.py without errors.
+Note that you will need to preprocess ALL DATASETS including data/external_datasets/cdna117k.csv and rosetta_training_data.csv to run analysis_notebooks/postprocessing.py without errors.
 
 You will need the following additional tools for preprocessing:
 
