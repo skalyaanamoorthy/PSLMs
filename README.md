@@ -60,8 +60,8 @@ cd PSLMs
    * Modify the wget command according to your compute architecture and operating system (e.g. `uname -m`)
    	* See https://salilab.org/modeller/download_installation.html  
    * Modify `convenience_scripts/append_modeller_paths.sh` to match
-   * Modify the KEY_MODELLER part of the command to be a valid Modeller license key which can be obtained for free for academic use
-   * Comment out this section if you don't need modeller
+   * :warning: **Modify the KEY_MODELLER=XXXX part of the command** substituting XXXX with a valid Modeller license key which can be obtained for free for academic use
+   * Comment out this section if you don't need Modeller or want to install it separately (or bind it from your system)
   
 3. Optionally comment out other software you don't need
 
