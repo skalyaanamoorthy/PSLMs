@@ -86,7 +86,7 @@ docker build -t pslm
  
  	* Upload the image to the cluster and load any modules e.g. `module load apptainer`
   	* Run the image with GPU support and with an overlay image to write files to (adjust size as needed, default 1 GB):
-    	```
+	```
      	apptainer overlay create --fakeroot --size 1024 overlay.img
      	apptainer shell --fakeroot --overlay overlay.img --nv pslm_image.sif
 	```
