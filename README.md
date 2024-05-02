@@ -72,7 +72,8 @@ docker build -t pslm
 ```
 
 5. Run the container with GPU support. On the clusters we used, this required porting to apptainer. Follow a) for Docker, b) for Apptainer
-	a) Directly run the image using Docker:
+	
+ 	a) Directly run the image using Docker:
 
 	`docker run --gpus all -it --rm pslm`
 
@@ -90,7 +91,7 @@ docker build -t pslm
      	apptainer shell --fakeroot --overlay overlay.img --nv pslm_image.sif
 	```
 
-7. **Skip to step 3 of Preprocessing ("Skip to here if using Docker") in this README**
+6. **Skip to step 3 of Preprocessing ("Skip to here if using Docker") in this README**
 
 ### General Setup 
 ℹ️ **This section is required for all uses of the repository, if not using Docker.**
