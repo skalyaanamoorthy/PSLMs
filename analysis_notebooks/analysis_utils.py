@@ -1307,7 +1307,7 @@ def compute_stats(
     df, 
     split_col=None, split_val=None, split_col_2=None, split_val_2=None, 
     measurements=['ddG', 'dTm'], stats=(), n_classes=2, quiet=False, 
-    grouper='code', n_bootstraps=-1
+    grouper='code', n_bootstraps=-1, split_first=True, split_last=True,
     ):
     """
     Computes all per-protein and per-dataset stats, including when splitting
@@ -1321,6 +1321,7 @@ def compute_stats(
     to only calculate a subset of the possible stats. You can use n_classes=3
     to eliminate the near-neutral mutations.
     """
+    assert (split_first or split_last)
     if n_bootstraps > 0:
         dbs_bs = bootstrap_by_grouper(df, n_bootstraps, grouper=grouper, drop=False)
     else:
@@ -1425,13 +1426,29 @@ def compute_stats(
         # case 2 splits on same col
         elif split_col_ == split_col_2_:
             split = [f'{split_col_} > {split_val}', f'{split_val} >= {split_col_} > {split_val_2}', f'{split_col_} <= {split_val_2}']
+        # case 3 splits total
+        elif split_last == False:
+            split = [f'{split_col_2_} > {split_val_2}',
+                    f'{split_col_} > {split_val} & {split_col_2_} <= {split_val_2}',
+                    f'{split_col_} <= {split_val} & {split_col_2_} <= {split_val_2}']
+        # case 3 splits total
+        elif split_first == False:
+            split = [f'{split_col_} > {split_val}', 
+                    f'{split_col_} <= {split_val} & {split_col_2_} > {split_val_2}',
+                    f'{split_col_} <= {split_val} & {split_col_2_} <= {split_val_2}']
         # case 2 splits on 2 cols
         else:
             split = [f'{split_col_} > {split_val} & {split_col_2_} > {split_val_2}', 
                     f'{split_col_} <= {split_val} & {split_col_2_} > {split_val_2}',
                     f'{split_col_} > {split_val} & {split_col_2_} <= {split_val_2}',
                     f'{split_col_} <= {split_val} & {split_col_2_} <= {split_val_2}']
-            
+            #s2 = []
+            #for keep, scaffold in zip(keep_scaffolds, split):
+            #    if keep:
+            #        s2.append(scaffold)
+            #split = s2
+            #print(split)
+                
         # separate statistics by measurement, feature scaffold, prediction
         idx = pd.MultiIndex.from_product([['dTm', 'ddG'], split, cols])
         df_out = pd.DataFrame(index=idx)
@@ -1449,26 +1466,48 @@ def compute_stats(
                 # which scaffold is being considered and is self-explanatory
                 # there is no logic needed if there is no split requested
 
-                # case where there are 4 scaffolds
                 if split_col_ != 'tmp' and split_col_2_ != 'tmp2' and split_col_ != split_col_2_:
+                    # case where there are 4 scaffolds
+                    if len(sp.split('&')) > 1:
+                        if '>' in sp.split('&')[0]:
+                            cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_] > split_val]
+                            cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_] > split_val]
+                            cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_] > split_val]
+                        elif '<=' in sp.split('&')[0]:
+                            cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_] <= split_val]
+                            cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_] <= split_val]
+                            cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_] <= split_val]
 
-                    if '>' in sp.split('&')[0]:
-                        cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_] > split_val]
-                        cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_] > split_val]
-                        cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_] > split_val]
-                    elif '<=' in sp.split('&')[0]:
-                        cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_] <= split_val]
-                        cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_] <= split_val]
-                        cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_] <= split_val]
+                        if '>' in sp.split('&')[1]:
+                            cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_2_] > split_val_2]
+                            cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_2_] > split_val_2]
+                            cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_2_] > split_val_2]
+                        elif '<=' in sp.split('&')[1]:
+                            cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_2_] <= split_val_2]
+                            cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_2_] <= split_val_2]
+                            cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_2_] <= split_val_2]
 
-                    if '>' in sp.split('&')[1]:
-                        cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_2_] > split_val_2]
-                        cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_2_] > split_val_2]
-                        cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_2_] > split_val_2]
-                    elif '<=' in sp.split('&')[1]:
-                        cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_2_] <= split_val_2]
-                        cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_2_] <= split_val_2]
-                        cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_2_] <= split_val_2]
+                    # case where there are 3 scaffolds
+                    elif len(sp.split('&')) == 1:
+                        if not split_first:
+                            if '>' in sp:
+                                cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_] > split_val]
+                                cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_] > split_val]
+                                cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_] > split_val]
+                            elif '<=' in sp:
+                                cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_] <= split_val]
+                                cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_] <= split_val]
+                                cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_] <= split_val]
+
+                        elif not split_last:
+                            if '>' in sp:
+                                cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_2_] > split_val_2]
+                                cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_2_] > split_val_2]
+                                cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_2_] > split_val_2]
+                            elif '<=' in sp:
+                                cur_df_bin = cur_df_bin.loc[cur_df_bin[split_col_2_] <= split_val_2]
+                                cur_df_discrete = cur_df_discrete.loc[cur_df_discrete[split_col_2_] <= split_val_2]
+                                cur_df_cont = cur_df_cont.loc[cur_df_cont[split_col_2_] <= split_val_2]   
 
                 # case where there are 3 scaffolds (on the same feature)
                 elif split_col_ == split_col_2_:
@@ -1523,7 +1562,7 @@ def compute_stats(
                         df_out.loc[(meas,sp,col), 'n'] = len(pred_df_bin)
                         saved_n = len(pred_df_bin)
                     if len(pred_df_bin) == 0:
-                        raise AssertionError(f'There are no {col} predictions in this scaffold!')
+                        raise AssertionError(f'There are no {col} predictions in this scaffold ({sp})!')
                     
                     # compute the 'easy' whole-dataset statistics
                     try:
@@ -2225,8 +2264,13 @@ def custom_barplot(data, x, y, hue, width, ax, use_color=None, legend_labels=Non
     unique_x = list(data[x].unique())
     data = data.copy(deep=True)
     if legend_labels is not None:
+        #print(legend_labels)
         unique_hue = legend_labels
-        unique_width = data.drop(x, axis=1).groupby([hue, width]).mean().astype(int).reset_index(level=1).loc[unique_hue][width]
+        try:
+            unique_width = data.drop(x, axis=1).groupby([hue, width]).mean().astype(int).reset_index(level=1).loc[unique_hue][width]
+        except ValueError as e:
+            print(data.drop(x, axis=1).groupby([hue, width]).mean()).fillna(0).astype(int).reset_index(level=1).loc[unique_hue][width]
+            print('Error:', e, 'probably caused by missing any data in one scaffold during bootstrapping, make less agressive scaffolds')
     else:
         unique_hue = data[hue].unique()
         unique_width = data[width].unique()
@@ -2308,7 +2352,10 @@ def compare_performance(dbc,
                         order = None,
                         plots = 'both',
                         drop_label = False,
-                        asterisk = ()
+                        asterisk = (),
+                        double_asterisk = (),
+                        split_first = True,
+                        split_last = True
                         ):
 
     rename_dict = {'delta_kdh': 'Δ hydrophobicity', 'delta_vol': 'Δ volume', 'rel_ASA': 'relative ASA', 'neff': 'N effective seqs'}
@@ -2389,11 +2436,13 @@ def compare_performance(dbc,
         if i == 0:
             #full = compute_stats(db_complete.sample(frac=1, replace=True),
             full = compute_stats(dbs_bs[0],
-                split_col=split_col, split_col_2=split_col_2, split_val=threshold_1, split_val_2=threshold_2, measurements=[measurement], stats=[statistic] + ['n'], grouper=grouper, quiet=True)
+                split_col=split_col, split_col_2=split_col_2, split_val=threshold_1, split_val_2=threshold_2, measurements=[measurement], 
+                    stats=[statistic] + ['n'], grouper=grouper, quiet=True, split_first=split_first, split_last=split_last)
         else:
             #c = compute_stats(db_complete.sample(frac=1, replace=True), quiet=True,
             c = compute_stats(dbs_bs[i], quiet=True,
-                split_col=split_col, split_col_2=split_col_2, split_val=threshold_1, split_val_2=threshold_2, measurements=[measurement], stats=[statistic] + ['n'], grouper=grouper)
+                split_col=split_col, split_col_2=split_col_2, split_val=threshold_1, split_val_2=threshold_2, measurements=[measurement],
+                    stats=[statistic] + ['n'], grouper=grouper, split_first=split_first, split_last=split_last)
             cur = c.reset_index()[['n', 'model', 'class', statistic_2]
                             + ([f'n_proteins_{statistic}'] if count_proteins else []) \
                             + ([f'n_muts_{statistic}'] if count_muts else [])]
@@ -2421,11 +2470,23 @@ def compare_performance(dbc,
     splits = splits.loc[ungrouped0['model']]#.reset_index()
     splits = splits.loc[ungrouped0['model']].reset_index() #.loc[splits['measurement']=='ddG']
 
-    #ungrouped0 = splits.melt(id_vars=['model', 'class'], value_vars=['tp', 'tn', 'fp', 'fn'])
-
     dbc = db_complete.copy(deep=True)
-    
-    if split_col_2 is not None:
+
+    if split_col_2 is not None and not split_first:
+        dbc[f'{split_col} > {threshold_1}'] = dbc[split_col] > threshold_1
+        dbc[f'{split_col} <= {threshold_1} & {split_col_2} > {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col_2] > threshold_2)
+        dbc[f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col_2] <= threshold_2)
+        vvs = [f'{split_col} > {threshold_1}', 
+                 f'{split_col} <= {threshold_1} & {split_col_2} > {threshold_2}',
+                 f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}']
+    if split_col_2 is not None and not split_last:
+        dbc[f'{split_col_2} > {threshold_2}'] = dbc[split_col_2] > threshold_2
+        dbc[f'{split_col} > {threshold_1} & {split_col_2} <= {threshold_2}'] = (dbc[split_col] > threshold_1) & (dbc[split_col_2] <= threshold_2)
+        dbc[f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col_2] <= threshold_2)
+        vvs = [f'{split_col_2} > {threshold_2}', 
+                 f'{split_col} > {threshold_1} & {split_col_2} <= {threshold_2}',
+                 f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}']
+    elif split_col_2 is not None:
         dbc[f'{split_col} > {threshold_1} & {split_col_2} > {threshold_2}'] = (dbc[split_col] > threshold_1) & (dbc[split_col_2] > threshold_2)
         dbc[f'{split_col} <= {threshold_1} & {split_col_2} > {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col_2] > threshold_2)
         dbc[f'{split_col} > {threshold_1} & {split_col_2} <= {threshold_2}'] = (dbc[split_col] > threshold_1) & (dbc[split_col_2] <= threshold_2)
@@ -2439,7 +2500,6 @@ def compare_performance(dbc,
         dbc[f'{split_col} <= {threshold_1}'] = dbc[split_col] <= threshold_1
         vvs = [f'{split_col} > {threshold_1}', f'{split_col} <= {threshold_1}']
     else:
-        dbc[f'{split_col} > {threshold_1}'] = dbc[split_col] > threshold_1
         dbc[f'{split_col} > {threshold_1}'] = dbc[split_col] > threshold_1
         dbc[f'{threshold_1} >= {split_col} > {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col] > threshold_2)
         dbc[f'{split_col} <= {threshold_2}'] = dbc[split_col] <= threshold_2
@@ -2522,6 +2582,7 @@ def compare_performance(dbc,
     ax = ax1 if plots in ['both', 'top'] else ax2
     remapped_x = [remap_names_2[tick.get_text()] if tick.get_text() in remap_names_2.keys() else tick.get_text() for tick in ax2.get_xticklabels()]
     remapped_x = [x+'*' if x in asterisk else x for x in remapped_x]
+    remapped_x = [x+'**' if x in double_asterisk else x for x in remapped_x]
     ax.set_xticklabels(remapped_x)
 
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
@@ -2876,6 +2937,26 @@ def compute_stats_bidirectional(db_gt_preds, split_col=None, split_val=None, spl
 
                     df_out.loc[(direction,sp,pred_col), 'mean_t1s'] = top_1_stab / len(current_full_predictions[grouper].unique())
 
+                # inverse of the assigned rank of the number one most stable protein per group
+                if ('mean_reciprocal_rank' in stats) or (stats == ()): 
+                    reciprocal_rank_sum = 0
+                    unique_groups = current_full_predictions[grouper].unique()
+                    for code, group in current_full_predictions.groupby(grouper):
+                        group = group.drop_duplicates()
+                        sorted_group = group.sort_values(pred_col, ascending=False)
+                        highest_meas_rank = sorted_group[true_col].idxmax()
+
+                        rank_of_highest_meas = sorted_group.index.get_loc(highest_meas_rank)
+                        if type(rank_of_highest_meas) == slice:
+                            print('Something went wrong with MRR for', col, code)
+                            continue
+
+                        rank_of_highest_meas += 1
+                        reciprocal_rank_sum += 1 / rank_of_highest_meas
+
+                    mean_reciprocal_rank = reciprocal_rank_sum / len(unique_groups)
+                    df_out.loc[(direction, sp, pred_col), 'mean_reciprocal_rank'] = mean_reciprocal_rank
+
                 if ('ndcg' in stats) or (stats == ()):
                     df_out.loc[(direction,sp,pred_col), 'ndcg'] = compute_ndcg(current_full_predictions, pred_col, true_col)
                     cum_ndcg = 0
@@ -3131,6 +3212,26 @@ def compute_stats_bidirectional(db_gt_preds, split_col=None, split_val=None, spl
                             top_1_stab += group.sort_values(pred_col_comb, ascending=False)['ddG'].head(1).item()
 
                         df_out.loc[('combined',sp,pred_col_comb), 'mean_t1s'] = top_1_stab / len(current_full_predictions[grouper].unique())
+
+                    # inverse of the assigned rank of the number one most stable protein per group
+                    if ('mean_reciprocal_rank' in stats) or (stats == ()): 
+                        reciprocal_rank_sum = 0
+                        unique_groups = current_full_predictions[grouper].unique()
+                        for code, group in current_full_predictions.groupby(grouper):
+                            group = group.drop_duplicates()
+                            sorted_group = group.sort_values(pred_col, ascending=False)
+                            highest_meas_rank = sorted_group[true_col].idxmax()
+
+                            rank_of_highest_meas = sorted_group.index.get_loc(highest_meas_rank)
+                            if type(rank_of_highest_meas) == slice:
+                                print('Something went wrong with MRR for', col, code)
+                                continue
+
+                            rank_of_highest_meas += 1
+                            reciprocal_rank_sum += 1 / rank_of_highest_meas
+
+                        mean_reciprocal_rank = reciprocal_rank_sum / len(unique_groups)
+                        df_out.loc[('combined', sp, pred_col_comb), 'mean_reciprocal_rank'] = mean_reciprocal_rank
 
                     if ('ndcg' in stats) or (stats == ()):
                         df_out.loc[('combined',sp,pred_col_comb), 'ndcg'] = compute_ndcg(current_full_predictions, pred_col_comb, 'ddG')
@@ -3408,116 +3509,19 @@ def custom_recursive_feature_addition(df_train, dfs_test, cols, target, model, l
     return test_scores, weights_df, dfs_test
 
 
-def compare_distributions_violin(df1, df2, shared_columns=None, source1='Q3421', source2='S461', label_adjust=0.2):
-    remap_names = {'delta_chg_dir': 'Δ charge', 'delta_vol_dir': 'Δ volume', 'hbonds': 'wt hydrogen bonds', 
-                    'multimer': 'chains in assembly', 'neff': 'n effective sequences', 'b_factor': 'beta factor',
-                    'rel_ASA_dir': 'SASA', 'delta_kdh_dir': 'Δ hydrophobicity', 'ddG': 'ΔΔG', 'structure_length': 'n residues', 
-                    'completeness_score': 'alignment completeness'}
-
-    if shared_columns is None:
-        # Identify shared columns
-        shared_columns = set(df1.columns).intersection(df2.columns)
-        print(shared_columns)
-
-    # Exclude boolean columns
-    shared_columns = [col for col in shared_columns if df1[col].dtype != 'bool' and df2[col].dtype != 'bool']
-
-    # Create a combined dataframe with an extra column to indicate the source dataframe
-    df1_copy = df1[shared_columns].copy()
-    df1_copy['source'] = source1
-
-    df2_copy = df2[shared_columns].copy()
-    df2_copy['source'] = source2
-
-    combined_df = pd.concat([df1_copy, df2_copy])
-
-    # Apply Min-Max Scaling
-    scaler = MinMaxScaler()
-    combined_df[shared_columns] = scaler.fit_transform(combined_df[shared_columns])
-
-    # Melt the dataframe to long format for plotting
-    melted_df = combined_df.melt(id_vars='source', value_vars=shared_columns)
-
-    # Plot a violin plot for each shared column
-    plt.figure(figsize=(20, 10))
-    ax = sns.violinplot(x='variable', y='value', hue='source', split=True, data=melted_df, bw=0.1, inner='quart')
-
-    for i, col in enumerate(shared_columns):
-        # Calculate medians before transformation
-        median_df1 = df1[col].median()
-        median_df2 = df2[col].median()
-        max_df1 = df1[col].max()
-        max_df2 = df2[col].max()
-        min_df1 = df1[col].min()
-        min_df2 = df2[col].min()
-
-        # Normalize column
-        combined_col = pd.concat([df1[[col]], df2[[col]]])
-        combined_col_scaled = scaler.fit_transform(combined_col)
-
-        # Create DataFrame for violin plot
-        violin_df = pd.DataFrame({
-            'Column': [i]*len(combined_col),  # replace column name with numeric value
-            'Value': combined_col_scaled.flatten(),
-            'Source': ['df1']*len(df1) + ['df2']*len(df2)
-        })
-
-        # Plot violin
-        #sns.violinplot(x='Column', y='Value', hue='Source', data=violin_df, split=True, inner=None, ax=ax)
-
-        # Plot median markers
-        median_df1_scaled = scaler.transform([[median_df1]])[0, 0]
-        median_df2_scaled = scaler.transform([[median_df2]])[0, 0]
-        plt.plot([i-0.15-label_adjust, i], [median_df1_scaled, median_df1_scaled], color='blue', linestyle='dashed')
-        plt.plot([i, i+0.25+label_adjust], [median_df2_scaled, median_df2_scaled], color='red', linestyle='dashed')
-
-        # Plot max markers
-        max_df1_scaled = scaler.transform([[max_df1]])[0, 0]
-        max_df2_scaled = scaler.transform([[max_df2]])[0, 0]
-        plt.plot([i-label_adjust, i], [max_df1_scaled, max_df1_scaled], color='blue', linestyle='dashed')
-        plt.plot([i, i+label_adjust], [max_df2_scaled, max_df2_scaled], color='red', linestyle='dashed')
-
-        # Plot min markers
-        min_df1_scaled = scaler.transform([[min_df1]])[0, 0]
-        min_df2_scaled = scaler.transform([[min_df2]])[0, 0]
-        plt.plot([i-label_adjust, i], [min_df1_scaled, min_df1_scaled], color='blue', linestyle='dashed')
-        plt.plot([i, i+label_adjust], [min_df2_scaled, min_df2_scaled], color='red', linestyle='dashed')
-
-        # Annotate median markers
-        ax.text(i-0.3-label_adjust, median_df1_scaled, f'{median_df1:.2f}', color='blue', va='center', fontsize=10)
-        ax.text(i+0.3+label_adjust, median_df2_scaled, f'{median_df2:.2f}', color='red', va='center', fontsize=10)
-
-        # Annotate max markers
-        ax.text(i-0.2-label_adjust, max_df1_scaled, f'{max_df1:.2f}', color='blue', va='center', fontsize=10)
-        ax.text(i+0.05+label_adjust, max_df2_scaled, f'{max_df2:.2f}', color='red', va='center', fontsize=10)
-
-        # Annotate min markers
-        ax.text(i-0.2-label_adjust, min_df1_scaled, f'{min_df1:.2f}', color='blue', va='center', fontsize=10)
-        ax.text(i+0.05+label_adjust, min_df2_scaled, f'{min_df2:.2f}', color='red', va='center', fontsize=10)
-
-    remapped_x = [remap_names[tick.get_text()] if tick.get_text() in remap_names.keys() else tick.get_text() for tick in ax.get_xticklabels()]
-    ax.set_xticklabels(remapped_x)
-
-    plt.title(f'Feature Distributions for {source1} and {source2}', fontsize=30)
-    plt.xticks(rotation=90, fontsize=16)
-    plt.yticks(rotation=90, fontsize=16)
-    plt.xlabel('Feature', fontsize=24)
-    plt.ylabel('Normalized Value', fontsize=24)
-    plt.show()
-
-
-def compare_distributions_boxes(dfs, shared_columns=None, sources=None):
+def compare_distributions_boxes(dfs, shared_columns=None, sources=None, kind='strip'):
     """
-    Generate a violin plot for selected columns from multiple DataFrames with different hues for each DataFrame,
+    Generate a distribution plot for selected columns from multiple DataFrames with different hues for each DataFrame,
     including annotations for min and max values for each feature and a zero-line annotation.
 
     Parameters:
         dfs (list of pd.DataFrame): List of DataFrames to compare.
         shared_columns (list of str): List of column names to include in the comparison. If None, computes intersection of all DataFrames.
         sources (list of str): Labels for the sources corresponding to each DataFrame in `dfs`.
+        kind (str): One of strip, violin or boxen to specify the plot type
 
     Returns:
-        None: Displays a violin plot.
+        None: Displays a distribution plot.
     """
     remap_names = {'delta_chg_dir': 'Δ charge', 'delta_vol_dir': 'Δ volume', 'hbonds': 'wt hydrogen bonds', 
                 'multimer': 'chains in assembly', 'neff': 'n effective sequences', 'b_factor': 'beta factor',
@@ -3555,11 +3559,14 @@ def compare_distributions_boxes(dfs, shared_columns=None, sources=None):
     # Melt the scaled dataframe to long format for plotting
     melted_df = scaled_data.melt(id_vars='Source', value_vars=shared_columns)
 
-    # Plot a violin plot for each shared column
+    # Plot a distribution plot for each shared column
     plt.figure(figsize=(12, 6))
-    ax = sns.stripplot(x='variable', y='value', hue='Source', data=melted_df, dodge=True, alpha=0.12, jitter=0.3)
-    #ax = sns.boxenplot(x='variable', y='value', hue='Source', data=melted_df)
-    #ax = sns.violinplot(x='variable', y='value', hue='Source', data=melted_df, split=True, bw=0.1, inner='quart')
+    if kind == 'strip':
+        ax = sns.stripplot(x='variable', y='value', hue='Source', data=melted_df, dodge=True, alpha=0.05, jitter=0.3)
+    elif kind == 'boxen':
+        ax = sns.boxenplot(x='variable', y='value', hue='Source', data=melted_df)
+    elif kind == 'violinplot':
+        ax = sns.violinplot(x='variable', y='value', hue='Source', data=melted_df, split=True, bw=0.1, inner='quart')
 
     # Enhance annotations and place legend outside
     plt.title('Feature Distributions Comparison')
@@ -3597,6 +3604,7 @@ def compare_distributions_boxes(dfs, shared_columns=None, sources=None):
     remapped_x = [remap_names[tick.get_text()] if tick.get_text() in remap_names.keys() else tick.get_text() for tick in ax.get_xticklabels()]
     ax.set_xticklabels(remapped_x)
     plt.show()
+
 
 def plot_joint_histogram(df1, df2, column, name1='K2369', name2='Q3421'):
     """
@@ -3637,6 +3645,7 @@ def plot_joint_histogram(df1, df2, column, name1='K2369', name2='Q3421'):
 
     plt.show()
 
+
 def bootstrap_table(df, 
                     plot_cols, plot_models, plot_title, ylim, right_y_lim,
                     table_cols, var_cols, sort_col, 
@@ -3670,7 +3679,7 @@ def bootstrap_table(df,
     tmp2.columns = [new_remap_cols[c] for c in tmp2.columns]
     tmp2 = tmp2.reset_index().drop_duplicates()
 
-    make_scatter_chart(tmp2, models=plot_models, title=plot_title, ylim=ylim, figsize=(7, 4), use_dual_y_axis=True, right_y_lim=right_y_lim)
+    make_scatter_chart(tmp2, models=plot_models, title=plot_title, ylim=ylim, figsize=(7, 4), use_dual_y_axis=True, right_y_lim=right_y_lim, sw=len(plot_cols)/3)
 
     s5_full = s5.copy(deep=True)
     #print(s5_full)
