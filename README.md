@@ -58,8 +58,9 @@ cd PSLMs
 ```
 2. Inspect the Dockerfile. The Modeller download section in particular depends on your system architecture.
    * Modify the wget command according to your compute architecture and operating system (e.g. `uname -m`)
-   	* See https://salilab.org/modeller/download_installation.html  
+     * See https://salilab.org/modeller/download_installation.html
    * Modify `convenience_scripts/append_modeller_paths.sh` to match
+     * This step is required to associate the paths Modeller uses so that the virtual environment is aware of it 
    * :warning: **Modify the KEY_MODELLER=XXXX part of the command** substituting XXXX with a valid Modeller license key which can be obtained for free for academic use
    * Comment out this section if you don't need Modeller or want to install it separately (or bind it from your system)
   
