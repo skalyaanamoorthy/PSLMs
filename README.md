@@ -134,7 +134,7 @@ git lfs pull
 
 	`pip install evcouplings --no-deps`
 
-ℹ️ ✔️ **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
+ℹ️ ✔️ **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb if you are demoing analysis only.**
 
 ### Inference Setup
 ℹ️ **This section is to install the deep learning libraries and predictive models used to generate the likelihood (or stability) predictions.**
