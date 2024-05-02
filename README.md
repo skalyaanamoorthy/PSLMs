@@ -81,14 +81,14 @@ docker build -t pslm
 	* Port the image to apptainer:
 	```
  	docker save pslm_image -o pslm_image.tar
-	apptainer build --fakeroot pslm_image.sif docker-archive://pslm_image.tar
+ 	apptainer build --fakeroot pslm_image.sif docker-archive://pslm_image.tar
  	```
  
  	* Upload the image to the cluster and load any modules e.g. `module load apptainer`
   	* Run the image with GPU support and with an overlay image to write files to (adjust size as needed, default 1 GB):
 	```
-     	apptainer overlay create --fakeroot --size 1024 overlay.img
-     	apptainer shell --fakeroot --overlay overlay.img --nv pslm_image.sif
+ 	apptainer overlay create --fakeroot --size 1024 overlay.img
+ 	apptainer shell --fakeroot --overlay overlay.img --nv pslm_image.sif
 	```
 
 6. **Skip to step 3 of Preprocessing ("Skip to here if using Docker") in this README**
