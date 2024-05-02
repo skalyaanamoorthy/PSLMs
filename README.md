@@ -11,6 +11,7 @@ This repository is for facilitating access to and benchmarking self-supervised d
   * tested on WSL2
   * tested on Fedora 38 (cannot use apt here of course)
 * Docker (optional, community edition (docker-ce) version 24.0.5 tested)
+  * Apptainer can be used if Docker is not allowed on clusters, tested version 1.2.4  		
 * Anaconda / Python 3.8 (tested)
   * dependencies included in requirements.txt (additionally requirements_inference.txt for running inference)
 * NVIDIA GPU (if running inference)
@@ -66,7 +67,7 @@ cd PSLMs
 
 4. From the root of the repository (takes ~30 minutes):
 ```
-sudo usermod -aG docker $USER
+sudo usermod -aG docker $USER # if not already done
 docker build -t pslm
 ```
 
