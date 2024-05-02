@@ -206,7 +206,7 @@ In order to perform inference you will first need to download and preprocess the
 	**Ensure to replace the modeller version and system architecture as required (you can find these with `uname` and `uname -m` respectively). Then make sure to restart the virtualenv**:
 	`source pslm/bin/activate`
 
-2. Unzip MSAs and weights. MSA Transformer and Tranception require multiple sequence alignments which we have already generated.
+2. Unzip MSAs and weights. MSA Transformer and Tranception require multiple sequence alignments which we have already generated. Full MSAs used by Tranception are too large to include in a GitHub repository (its performance is very similar with these reduced MSAs), please reach out to us if you need the full MSAs.
 ```
 unzip ./data/preprocessed/msas.zip -d ./data/preprocessed/msas
 unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights 
