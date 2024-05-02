@@ -10,18 +10,19 @@ This repository is for facilitating access to and benchmarking self-supervised d
   * tested on GNU/Linux 3.10.0-1160.71.1.el7.x86_64, 4.18.0-477.21.1.el8_8.x86_64
   * tested on WSL2
   * tested on Fedora 38 (cannot use apt here of course)
+* Docker (optional, community edition (docker-ce) version 24.0.5 tested)
 * Anaconda / Python 3.8 (tested)
   * dependencies included in requirements.txt (additionally requirements_inference.txt for running inference)
 * NVIDIA GPU (if running inference)
   * tested on A100, RTX 3090
 * High RAM
   * up to 128GB for preprocessing or inference involving MSAs
-* NVIDIA CUDA (tested v11) and CUDNN (if running inference)
-* HMMER (if generating MSAs)
+* NVIDIA CUDA (tested v11.4, 12.2) and CUDNN (if running inference)
+* HMMER (if generating MSAs, tested version 3.2.1)
 * Git LFS (if examining or analyzing reported data, including re-running notebooks)
-* MMSeqs2 (if doing sequence clustering)
-* FATCAT (if doing structure clustering)
-* DSSP (if calculating surface area features for analysis)
+* MMSeqs2 (if doing sequence clustering, version 13-45111+ds-2 tested)
+* FATCAT (if doing structure clustering, version ef787fe tested)
+* DSSP (if calculating surface area features for analysis, version 4.04 tested)
 * Rosetta (if doing biophysical stability prediction, used version 2019.21.60746)
 
 # Demo /  Instructions
@@ -64,12 +65,27 @@ cd PSLMs
 3. Optionally comment out other software you don't need
 
 4. From the root of the repository (takes ~30 minutes):
+```
+sudo usermod -aG docker $USER
+docker build -t pslm
+```
 
-	`docker build -t pslm .`
-
-5. Run the container with gpu support
+5. Run the container with GPU support. On the clusters we used, this required porting to apptainer. Follow a) for Docker, b) for Apptainer
+	a) Directly run the image using Docker:
 
 	`docker run --gpus all -it --rm pslm`
+
+	b) * Port the image to apptainer:
+	```
+ 	docker save pslm_image -o pslm_image.tar
+	apptainer build --fakeroot pslm_image.sif docker-archive://pslm_image.tar
+ 	```
+ 	* Upload the image to the cluster and load any modules e.g. `module load apptainer`
+  	* Run the image with GPU support and with an overlay image to write files to (adjust size as needed, default 1 GB):
+    	```
+     	apptainer overlay create --fakeroot --size 1024 overlay.img
+     	apptainer shell --fakeroot --overlay overlay.img --nv pslm_image.sif
+	```
 
 6. **Skip to step 3 of Preprocessing ("Skip to here if using Docker") in this README**
 
