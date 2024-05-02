@@ -316,7 +316,9 @@ export FATCAT=/home/sareeves/software/FATCAT-dist
 
 ⚠️**You MUST run the preprocessing scripts to generate the correct file mappings for your system, or else always run inference from the root of the repo. If you run into problems with missing files when running inference, this is probably why. You also need to install requirements_inference.txt**
 
-1. You can run any of the inference scripts in inference_scripts. Note that ProteinMPNN and Tranception require the location where the GitHub repository was installed as arguments. e.g.:
+0. MSA Transformer depends on subsampled alignments. We provide the script `inference_scripts/subsample_one.py` associated with `cluster_inference_scripts/subsample_msas_{dataset}.sh` to facilitate creating these subsamples. Note that the choice of sample may impact MSA Transformer's performance slightly. The aforementioned scripts generate all subsampled MSAs in parallel and are appropriate for clusters. For desktop environments, you can generate subsampled MSAs during inference by adding the argument `--do_subsampling` to `inference_scripts/msa_transformer.py`.
+
+1. You can run any of the inference scripts in inference_scripts. You can copy commands from the associated `cluster_inference_scripts` for convenience and prototypes. Note that ProteinMPNN and Tranception require the location where the GitHub repository was installed as arguments. e.g.:
 
 	`python inference_scripts/mpnn.py --db_loc 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds.csv' --mpnn_loc ./ProteinMPNN --noise '20'`
 
