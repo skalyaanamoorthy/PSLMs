@@ -190,8 +190,6 @@ If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predi
 
 ⏬🚩 **Skip to step 3 if using Docker**
 
-**Note: you can skip this step to demo results. This is for reproducing predictions.**
-
 In order to perform inference you will first need to download and preprocess the structures and sequences. Follow the above instructions before proceeding. Note that you will need to preprocess ALL DATASETS including data/external_datasets/cdna117k.csv and rosetta_training_data.csv to run analysis_notebooks/postprocessing.py without errors.
 
 1. Obtain Modeller (for repairing PDB structures): https://salilab.org/modeller/download_installation.html You will need a license, which is free for academic use; follow the download page instructions to make sure it is specified. 
@@ -215,6 +213,7 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 ```
 
 🚩 **Skip to here if using Docker**
+*Make sure your virtual environment is activated `source /opt/venv/bin/activate` and you are in the correct directory `cd /app`*
 
 3. To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py.  Assuming you are in the base level of the repo, you can call the following:
 
