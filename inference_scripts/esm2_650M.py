@@ -34,8 +34,8 @@ def score_sequences(args):
         for code, group in df2.groupby('code'):
             for uid, row in group.iterrows():
                 with torch.no_grad():
-                    if True:
-                    #try:
+                    #if True:
+                    try:
                         pos = row['position']
                         wt = row['wild_type']
                         mt = row['mutation']
@@ -50,7 +50,7 @@ def score_sequences(args):
                         #if code == '1TIT':
                         #    sequence = row['uniprot_seq'][ws:ws+1023]
                         #    oc -= ws
-                        idx = pos + oc
+                        idx = int(pos + oc)
 
                         start = time.time()
 
@@ -77,10 +77,10 @@ def score_sequences(args):
 
                         logps.at[uid, f'esm2_650M_dir'] = score.item()
                         logps.at[uid, f'runtime_esm2_650M_dir'] = time.time() - start
-                    #except:
-                    #    print('failed: ', code, wt, pos, mt)
-                    #    logps.at[uid, f'esm2_dir'] = np.nan
-                    #    logps.at[uid, f'runtime_esm2_dir'] = np.nan
+                    except:
+                        print('failed: ', code, wt, pos, mt)
+                        logps.at[uid, f'esm2_650M_dir'] = np.nan
+                        logps.at[uid, f'runtime_esm2_650M_dir'] = np.nan
                     pbar.update(1)
     
     df = pd.read_csv(args.output, index_col=0)
