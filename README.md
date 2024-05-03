@@ -11,6 +11,7 @@ This repository is for facilitating access to and benchmarking self-supervised d
   * tested on WSL2
   * tested on Fedora 38 (cannot use apt here of course)
 * Docker (optional, community edition (docker-ce) version 24.0.5 tested)
+  * Apptainer can be used if Docker is not allowed on clusters, tested version 1.2.4  		
 * Anaconda / Python 3.8 (tested)
   * dependencies included in requirements.txt (additionally requirements_inference.txt for running inference)
 * NVIDIA GPU (if running inference)
@@ -57,34 +58,38 @@ cd PSLMs
 ```
 2. Inspect the Dockerfile. The Modeller download section in particular depends on your system architecture.
    * Modify the wget command according to your compute architecture and operating system (e.g. `uname -m`)
-   	* See https://salilab.org/modeller/download_installation.html  
+     * See https://salilab.org/modeller/download_installation.html
    * Modify `convenience_scripts/append_modeller_paths.sh` to match
-   * Modify the KEY_MODELLER part of the command to be a valid Modeller license key which can be obtained for free for academic use
-   * Comment out this section if you don't need modeller
+     * This step is required to associate the paths Modeller uses so that the virtual environment is aware of it 
+   * :warning: **Modify the KEY_MODELLER=XXXX part of the command** substituting XXXX with a valid Modeller license key which can be obtained for free for academic use
+   * Comment out this section if you don't need Modeller or want to install it separately (or bind it from your system)
   
 3. Optionally comment out other software you don't need
 
 4. From the root of the repository (takes ~30 minutes):
 ```
-sudo usermod -aG docker $USER
+sudo usermod -aG docker $USER # if not already done
 docker build -t pslm
 ```
 
 5. Run the container with GPU support. On the clusters we used, this required porting to apptainer. Follow a) for Docker, b) for Apptainer
-	a) Directly run the image using Docker:
+	
+ 	a) Directly run the image using Docker:
 
 	`docker run --gpus all -it --rm pslm`
 
-	b) * Port the image to apptainer:
+	b)
+	* Port the image to apptainer:
 	```
  	docker save pslm_image -o pslm_image.tar
-	apptainer build --fakeroot pslm_image.sif docker-archive://pslm_image.tar
+ 	apptainer build --fakeroot pslm_image.sif docker-archive://pslm_image.tar
  	```
+ 
  	* Upload the image to the cluster and load any modules e.g. `module load apptainer`
   	* Run the image with GPU support and with an overlay image to write files to (adjust size as needed, default 1 GB):
-    	```
-     	apptainer overlay create --fakeroot --size 1024 overlay.img
-     	apptainer shell --fakeroot --overlay overlay.img --nv pslm_image.sif
+	```
+ 	apptainer overlay create --fakeroot --size 1024 overlay.img
+ 	apptainer shell --fakeroot --overlay overlay.img --nv pslm_image.sif
 	```
 
 6. **Skip to step 3 of Preprocessing ("Skip to here if using Docker") in this README**
@@ -130,7 +135,7 @@ git lfs pull
 
 	`pip install evcouplings --no-deps`
 
-ℹ️ ✔️ **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb .**
+ℹ️ ✔️ **You can now proceed directly to run the demo analysis_notebooks/q3421_analysis.ipynb if you are demoing analysis only.**
 
 ### Inference Setup
 ℹ️ **This section is to install the deep learning libraries and predictive models used to generate the likelihood (or stability) predictions.**
@@ -185,8 +190,6 @@ If you have a sufficient NVIDIA GPU (tested on 3090 and A100) you can make predi
 
 ⏬🚩 **Skip to step 3 if using Docker**
 
-**Note: you can skip this step to demo results. This is for reproducing predictions.**
-
 In order to perform inference you will first need to download and preprocess the structures and sequences. Follow the above instructions before proceeding. Note that you will need to preprocess ALL DATASETS including data/external_datasets/cdna117k.csv and rosetta_training_data.csv to run analysis_notebooks/postprocessing.py without errors.
 
 1. Obtain Modeller (for repairing PDB structures): https://salilab.org/modeller/download_installation.html You will need a license, which is free for academic use; follow the download page instructions to make sure it is specified. 
@@ -203,13 +206,15 @@ In order to perform inference you will first need to download and preprocess the
 	**Ensure to replace the modeller version and system architecture as required (you can find these with `uname` and `uname -m` respectively). Then make sure to restart the virtualenv**:
 	`source pslm/bin/activate`
 
-2. Unzip MSAs and weights. MSA Transformer and Tranception require multiple sequence alignments which we have already generated.
+2. Unzip MSAs and weights. MSA Transformer and Tranception require multiple sequence alignments which we have already generated. Full MSAs used by Tranception are too large to include in a GitHub repository (its performance is very similar with these reduced MSAs), please reach out to us if you need the full MSAs.
 ```
 unzip ./data/preprocessed/msas.zip -d ./data/preprocessed/msas
 unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights 
 ```
 
 🚩 **Skip to here if using Docker**
+
+*If using Docker: make sure your virtual environment is activated `source /opt/venv/bin/activate` and you are in the correct directory `cd /app`*
 
 3. To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py.  Assuming you are in the base level of the repo, you can call the following:
 
@@ -311,7 +316,9 @@ export FATCAT=/home/sareeves/software/FATCAT-dist
 
 ⚠️**You MUST run the preprocessing scripts to generate the correct file mappings for your system, or else always run inference from the root of the repo. If you run into problems with missing files when running inference, this is probably why. You also need to install requirements_inference.txt**
 
-1. You can run any of the inference scripts in inference_scripts. Note that ProteinMPNN and Tranception require the location where the GitHub repository was installed as arguments. e.g.:
+0. MSA Transformer depends on subsampled alignments. We provide the script `inference_scripts/subsample_one.py` associated with `cluster_inference_scripts/subsample_msas_{dataset}.sh` to facilitate creating these subsamples. Note that the choice of sample may impact MSA Transformer's performance slightly. The aforementioned scripts generate all subsampled MSAs in parallel and are appropriate for clusters. For desktop environments, you can generate subsampled MSAs during inference by adding the argument `--do_subsampling` to `inference_scripts/msa_transformer.py`.
+
+1. You can run any of the inference scripts in inference_scripts. You can copy commands from the associated `cluster_inference_scripts` for convenience and prototypes. Note that ProteinMPNN and Tranception require the location where the GitHub repository was installed as arguments. e.g.:
 
 	`python inference_scripts/mpnn.py --db_loc 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds.csv' --mpnn_loc ./ProteinMPNN --noise '20'`
 
