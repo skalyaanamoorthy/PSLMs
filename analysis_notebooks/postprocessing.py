@@ -239,7 +239,10 @@ df
 ### cluster based on E-value (structural)
 from collections import defaultdict
 
-def find_cluster(protein, assigned_clusters, threshold=0.01):
+def find_cluster(protein, assigned_clusters, similarity_matrix, threshold=0.01):
+    """
+    Determines which cluster, if any, a protein should join based on a similarity threshold.
+    """
     for cluster in assigned_clusters:
         if all(similarity_matrix.at[protein, member] <= threshold for member in cluster):
             return cluster
@@ -248,9 +251,9 @@ def find_cluster(protein, assigned_clusters, threshold=0.01):
 for name, codes in zip(datasets, [fireprot, s461, s669, q3421, ssym, k2369, k3822]):
     df_cur = df.copy(deep=True).loc[df['datasets_1'].astype(str).str.contains(f"\'{name}\'")]
     df_cur = df_cur.loc[df['datasets_2'].astype(str).str.contains(f"\'{name}\'")]
-    #df_cur = df_cur.loc[df['Similarity (%)']>50]
-    # Create a list of all unique codes
-    all_codes = set(df_cur['code_1']).union(set(df_cur['code_2']))
+
+    # Create a list of all unique codes, sorted to ensure deterministic behavior
+    all_codes = sorted(set(df_cur['code_1']).union(set(df_cur['code_2'])))
 
     # Pivot to create a similarity matrix
     similarity_matrix = df_cur.pivot(index='code_1', columns='code_2', values='P-value')
@@ -260,12 +263,12 @@ for name, codes in zip(datasets, [fireprot, s461, s669, q3421, ssym, k2369, k382
 
     # Fill NaN values with 0 and make the matrix symmetric
     similarity_matrix = similarity_matrix.fillna(0)
-    similarity_matrix = similarity_matrix + similarity_matrix.T - similarity_matrix.multiply(similarity_matrix.T.gt(0))
+    similarity_matrix = similarity_matrix + similarity_matrix.T - np.diag(np.diag(similarity_matrix))
 
     # Assign proteins to clusters
     clusters = defaultdict(list)
-    for protein in similarity_matrix.index:
-        cluster = find_cluster(protein, clusters.values())
+    for protein in all_codes:  # Iterate through a sorted list of proteins
+        cluster = find_cluster(protein, clusters.values(), similarity_matrix)
         if cluster is not None:
             cluster.append(protein)
         else:

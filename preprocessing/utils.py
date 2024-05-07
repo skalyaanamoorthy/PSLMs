@@ -100,6 +100,7 @@ def get_uniprot(code, chain, SEQUENCES_DIR, uniprot_id=None):
             print(e)
             print('It looks like the PDB e-KB might be temporarily down.')
             print('Please try again later.')
+            exit()
 
     # get specifically the sequence related to the target structure
     try:
