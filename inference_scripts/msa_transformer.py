@@ -111,7 +111,7 @@ def score_sequences(args):
             orig_msa = group.head(1)['reduced_msa_file'].item()
             if args.do_subsampling:
                 try:
-                    subsample(orig_msa, nseqs=384, reps=5)
+                    subsample(orig_msa, nseqs=384, reps=5, dataset=args.dataset, neff_only=False)
                 except TypeError:
                     print('Skipping', code, ', no alignment found')
                     continue
@@ -223,9 +223,12 @@ def main():
         args.dataset = 'fireprot'
     elif 's669' in args.db_loc.lower() or 's461' in args.db_loc.lower():
         args.dataset = 's669'
-    else:
-        print('Inferred use of user-created database')
-        args.dataset = 'custom'
+    elif 'k2369' in args.db_loc.lower() or 'k3822' in args.db_loc.lower():
+        args.dataset = 'k3822'
+    elif 'q3421' in args.db_loc.lower():
+        args.dataset = 'q3421'
+    elif 'ssym' in args.db_loc.lower():
+        args.dataset = 'ssym'
 
     score_sequences(args)
 
