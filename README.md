@@ -10,12 +10,13 @@ This repository is for facilitating access to and benchmarking self-supervised d
   * tested on GNU/Linux 3.10.0-1160.71.1.el7.x86_64, 4.18.0-477.21.1.el8_8.x86_64
   * tested on WSL2
   * tested on Fedora 38 (cannot use apt here of course)
+* NVIDIA GPU (if running inference)
+  * tested on A100, RTX 3090
+* ~45 GB of free space (more if using all inference models)
 * Docker (optional, community edition (docker-ce) version 24.0.5 tested)
   * Apptainer can be used if Docker is not allowed on clusters, tested version 1.2.4  		
 * Anaconda / Python 3.8 (tested)
   * dependencies included in requirements.txt (additionally requirements_inference.txt for running inference)
-* NVIDIA GPU (if running inference)
-  * tested on A100, RTX 3090
 * High RAM
   * up to 128GB for preprocessing or inference involving MSAs
 * NVIDIA CUDA (tested v11.4, 12.2) and CUDNN (if running inference)
@@ -69,7 +70,7 @@ cd PSLMs
 4. From the root of the repository (takes ~30 minutes):
 ```
 sudo usermod -aG docker $USER # if not already done
-docker build -t pslm
+docker build -t pslm .
 ```
 
 5. Run the container with GPU support. On the clusters we used, this required porting to apptainer. Follow a) for Docker, b) for Apptainer
