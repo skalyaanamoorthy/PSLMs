@@ -52,6 +52,8 @@ The sections after general setup are for reproducing the experiments starting fr
 
 ⚠️⏬ **If you are only interested in demoing notebooks, skip to the General Setup section.**
 
+⚠️ **If you experience issues with Nvidia drivers and Docker, note that we used the community edition: https://docs.docker.com/engine/install/ubuntu/**
+
 1. Clone the repository:
 ```
 git clone https://github.com/skalyaanamoorthy/PSLMs.git
