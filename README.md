@@ -223,7 +223,7 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 
 	`python preprocessing/preprocess.py --dataset q3421`
 
-	This step is expected to take ~10 minutes each for the two larger datasets (Q3421 and K2369) and updates the file `./data/preprocessed/{dataset}_mapped.csv`.
+	*This step is expected to take ~10 minutes each for the two larger datasets (Q3421 and K2369) and updates the file `./data/preprocessed/{dataset}_mapped.csv`.*
 
 5. Repeat this with the other datasets you intend to run inference on e.g. k3822, s669, s461, fireprot, etc.
    
@@ -283,7 +283,7 @@ make
 
 	`python3 preprocessing/compute_features.py --alistat_loc ./AliStat`
 
-It is expected that there will be some errors in computing features. However, if you see that DSSP did not produce an output, this is an issue with the DSSP version. Make sure you have version 4, or else install via GitHub. AliStat might fail for large alignments if you do not have enough RAM; we have read only the first 100,000 lines for large files to try to mitigate this. Remember that the features have been pre-computed for your convience as stated above, and any missing features can be handled by merging with our dataframes.
+Note: It is expected that there will be some errors in computing features. However, if you see that DSSP did not produce an output, this is an issue with the DSSP version. Make sure you have version 4, or else install via GitHub. AliStat might fail for large alignments if you do not have enough RAM; we have read only the first 100,000 lines for large files to try to mitigate this. Remember that the features have been pre-computed for your convience as stated above, and any missing features can be handled by merging with our dataframes.
 
 ### Clustering Analysis
 ℹ️ **This subsection is for computing the homology between sequences and structures for the purposes of understanding and mitigating the overlap of training and test sets as well as effectively bootstrapping or computing statistics based on structurally homologous protein families.**
@@ -329,7 +329,7 @@ export FATCAT=/home/sareeves/software/FATCAT-dist
 
 	`python inference_scripts/mpnn.py --db_loc 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds.csv' --mpnn_loc ./ProteinMPNN --noise '20'`
 
-	This step is expected to take <2 minutes and should update the designated output file.
+	*This step is expected to take <2 minutes and should update the designated output file.*
 
 ⚠️ **Due to the use of relative paths in the _mapped.csv, you must call inference scripts from the root of the repository! Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
 
