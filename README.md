@@ -13,13 +13,14 @@ This repository is for facilitating access to and benchmarking self-supervised d
 * NVIDIA GPU (if running inference)
   * tested on A100, RTX 3090
 * NVIDIA CUDA (tested v11.4, 12.2) and CUDNN (if running inference)
-* ~45 GB of free space (more if using all inference models)
-* Docker (optional, community edition (docker-ce) version 24.0.5 tested)
-  * Apptainer can be used if Docker is not allowed on clusters, tested version 1.2.4  		
-* Anaconda / Python 3.8 (tested)
-  * dependencies included in requirements.txt (additionally requirements_inference.txt for running inference)
 * High RAM
   * up to 128GB for preprocessing or inference involving MSAs
+* ~45 GB of free space (more if using all inference models)
+* Docker (optional, community edition (docker-ce) version 24.0.5 tested)
+  * Apptainer can be used if Docker is not allowed on clusters, tested version 1.2.4
+  * NVIDIA container toolkit (e.g. nvidia-docker2) 		
+* Anaconda / Python 3.8 (tested)
+  * dependencies included in requirements.txt (additionally requirements_inference.txt for running inference)
 * HMMER (if generating MSAs, tested version 3.2.1)
 * Git LFS (if examining or analyzing reported data, including re-running notebooks)
 * MMSeqs2 (if doing sequence clustering, version 13-45111+ds-2 tested)
@@ -43,14 +44,16 @@ We recommend demoing the more thoroughly documented and tidy analysis_notebooks/
 
 ℹ️ Only general setup is required to demo analysis notebooks.
 
-The expected installation time for basic functionality is >10 minutes, assuming you only install the first requirements.txt. Approximatly 30 minutes would be required to install CUDA / CUDNN / Pytorch and inference_requirements but depends on internet connection. Similarly, installation time for tested models for inference depends on the internet connection speed, as some models are many GiB in size.
+The expected installation time for basic functionality is >10 minutes, assuming you only install the first requirements.txt. Approximately 45 minutes is required to install all CUDA / CUDNN / Pytorch, inference_requirements and auxiliary software (which the Docker setup does) but depends on internet connection. Similarly, installation time for tested models for inference depends on the internet connection speed, as some models are many GiB in size. A full Docker-based demo, including image creation, data preprocessing for one dataset, and inference using one model, may take as long as 90 minutes (mostly for downloading models and packages).
 
 The sections after general setup are for reproducing the experiments starting from raw data.
 
 ### Docker Setup 
-ℹ️ **This section is the easiest option for running inference and completely reproducing the analyses.**
+ℹ️ **This section is the easiest option for running inference and completely reproducing the analyses. Creating the image may take upwards of an hour.**
 
 ⚠️⏬ **If you are only interested in demoing notebooks, skip to the General Setup section.**
+
+⚠️ **If you experience issues with Nvidia drivers and Docker, note that we used the community edition: https://docs.docker.com/engine/install/ubuntu/**
 
 1. Clone the repository:
 ```
@@ -221,7 +224,11 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 
 	`python preprocessing/preprocess.py --dataset q3421`
 
-4. Repeat this with the other datasets you intend to run inference on e.g. k3822, s669, s461, fireprot, etc.
+	*This step is expected to take ~10 minutes each for the two larger datasets (Q3421 and K2369) and updates the file `./data/preprocessed/{dataset}_mapped.csv`.*
+
+5. Repeat this with the other datasets you intend to run inference on e.g. k3822, s669, s461, fireprot, etc.
+   
+6. **If running demo: Skip to Inference and Analysis section.** 
 
 #### Notes:
 
@@ -277,7 +284,7 @@ make
 
 	`python3 preprocessing/compute_features.py --alistat_loc ./AliStat`
 
-It is expected that there will be some errors in computing features. However, if you see that DSSP did not produce an output, this is an issue with the DSSP version. Make sure you have version 4, or else install via GitHub. AliStat might fail for large alignments if you do not have enough RAM; we have read only the first 100,000 lines for large files to try to mitigate this. Remember that the features have been pre-computed for your convience as stated above, and any missing features can be handled by merging with our dataframes.
+Note: It is expected that there will be some errors in computing features. However, if you see that DSSP did not produce an output, this is an issue with the DSSP version. Make sure you have version 4, or else install via GitHub. AliStat might fail for large alignments if you do not have enough RAM; we have read only the first 100,000 lines for large files to try to mitigate this. Remember that the features have been pre-computed for your convience as stated above, and any missing features can be handled by merging with our dataframes.
 
 ### Clustering Analysis
 ℹ️ **This subsection is for computing the homology between sequences and structures for the purposes of understanding and mitigating the overlap of training and test sets as well as effectively bootstrapping or computing statistics based on structurally homologous protein families.**
@@ -323,6 +330,8 @@ export FATCAT=/home/sareeves/software/FATCAT-dist
 
 	`python inference_scripts/mpnn.py --db_loc 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds.csv' --mpnn_loc ./ProteinMPNN --noise '20'`
 
+	*This step is expected to take <2 minutes and should update the designated output file.*
+
 ⚠️ **Due to the use of relative paths in the _mapped.csv, you must call inference scripts from the root of the repository! Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
 
 You can use the template calls from cluster_inference_scripts in order to determine the template for calling each method's wrapper script (they are designed to be called from the cluster_inference_scripts directory, though). If you are running on a cluster, you will likely find it convenient to modify the `cluster_inference_scripts` and directly submit them; they are designed to be submitted from their own folder as the working directory, rather than the root of the repo like all other files. Note that each method will require substantial storage space and network usage to download the model weights on their first run (especially ESM-1V and ESM-15B).
@@ -336,9 +345,11 @@ You can use the template calls from cluster_inference_scripts in order to determ
 ⚠️**It is not recommended to try to run the Jupyter Notebooks from a Docker instance**
 
 1. When new predictions, features, clusters etc. have been created run:
-	`python3 analysis_notebooks/postprocessing.py`
+	`python analysis_notebooks/postprocessing.py`
 
-2. Run any of the analysis notebooks using Jupyter Notebook (tested in VSCode server). Reduce bootstraps if calculations are taking too long.
+	*This step is expected to take <2 minutes and should update all of the data/analysis/{dataset}_analysis.csv files using the unzipped Rosetta and homology files.*
+
+3. Run any of the analysis notebooks using Jupyter Notebook (tested in VSCode server). Reduce bootstraps if calculations are taking too long.
 
 
 
