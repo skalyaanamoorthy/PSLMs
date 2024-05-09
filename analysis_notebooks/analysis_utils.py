@@ -77,9 +77,6 @@ remap_names = {
     'Evo': 'EvoEF',
     'msa_transformer_median': 'MSA-T median',
     'ankh': 'Ankh',
-    'ensemble': 'Ensemble',
-    'ensemble2': 'Ensemble 2',
-    'ensemble3': 'Ensemble 3',
     'structural': 'Structural',
     'evolutionary': 'Evolutionary',
     'supervised': 'Supervised',
@@ -91,12 +88,12 @@ remap_names = {
     'delta_vol': 'Δ volume', 
     'delta_chg': 'Δ charge',
     'rel_ASA': 'relative ASA',
-    'q3421_pslm_rfa_2': 'Ensemble 2 Feats',
-    'q3421_pslm_rfa_3': 'Ensemble 3 Feats',
-    'q3421_pslm_rfa_4': 'Ensemble 4 Feats',
-    'q3421_pslm_rfa_5': 'Ensemble 5 Feats',
-    'q3421_pslm_rfa_6': 'Ensemble 6 Feats',
-    'q3421_pslm_rfa_7': 'Ensemble 7 Feats',
+    'q3421_pslm_rfa_2': 'Ensemble* 2 Feats',
+    'q3421_pslm_rfa_3': 'Ensemble* 3 Feats',
+    'q3421_pslm_rfa_4': 'Ensemble* 4 Feats',
+    'q3421_pslm_rfa_5': 'Ensemble* 5 Feats',
+    'q3421_pslm_rfa_6': 'Ensemble* 6 Feats',
+    'q3421_pslm_rfa_7': 'Ensemble* 7 Feats',
     'K1566_pslm_rfa_2': 'Ensemble 2 Feats',
     'K1566_pslm_rfa_3': 'Ensemble 3 Feats',
     'K1566_pslm_rfa_4': 'Ensemble 4 Feats',
@@ -145,9 +142,9 @@ biophysical = ['cartesian_ddg', 'FoldX', 'Evo', 'CartDDG']
 ensemble = ['ens', 'mpnn_rosetta', 'rfa', ' + ']
 unknown = ['ddG', 'dTm', 'random', 'delta', 'ASA', 'Dynamut', 'upper_bound']
 
-categories = ['struc. PSLM', 'seq. PSLM', 'transfer', 'biophysical', 'potential', 'untrained', 'supervised', 'unknown', 'unused', 'ensemble']
-colors = list(sns.color_palette())[:len(categories)]
-custom_colors = dict(zip(categories, colors))   
+categories = tuple(['struc. PSLM', 'seq. PSLM', 'transfer', 'biophysical', 'potential', 'untrained', 'supervised', 'unknown', 'unused', 'ensemble'])
+colors = tuple(list(sns.color_palette('tab10'))[:len(categories)])
+custom_colors = dict(zip(categories, colors)) 
 
 mapping_categories = {  'ensemble': ensemble,
                         'unknown': unknown,
@@ -176,21 +173,26 @@ def generate_palette(base_color):
         palette.append(sns.light_palette(base_color, n_colors=7, reverse=True)[::2][p])
         palette.append(sns.dark_palette(base_color, n_colors=7, reverse=True)[::2][p])
 
-    # Adding random noise to each color in the palette and converting to hex
-    noisy_palette_hex = []
-    i = 0
-    for color in palette:
-        if i == 0:
-            i = 1
-            noisy_palette_hex.append(color)
-            continue
-        noise = np.random.normal(0, 0.06, 3)
-        noisy_color = np.clip(np.array([n+c for n,c in zip(noise, color)]), 0, 1)
-        #print(color, noise, noisy_color)
-        #hex_color = '#{:02x}{:02x}{:02x}'.format(int(noisy_color[0]*255), int(noisy_color[1]*255), int(noisy_color[2]*255))
-        noisy_palette_hex.append(tuple(noisy_color))
+    # Predefined offsets to create variation
+    # Ensure these offsets keep the colors within the [0, 1] range after application
+    offsets = [
+        (0, 0, 0),  # First color unchanged
+        (0.07, 0.07, 0),  # Slightly increase contrast for the second color
+        (-0.08, 0.08, -0.),  # Increase contrast for the third color
+        (0.07, -0.07, 0.07),  # Significantly alter the fourth color for more distinction
+        (-0.06, 0.6, -0.06),  # Minor adjustments for the fifth to balance the palette
+        (0.04, -0.04, 0.04),  # Continue with subtle changes
+        (-0.04, 0.04, -0.04)  # And further subtle changes
+    ]
 
-    return noisy_palette_hex
+    # Apply deterministic offsets to each color in the palette
+    deterministic_palette_hex = []
+    for color, offset in zip(palette, offsets):
+        # Adjust each color component within the clipping bounds
+        adjusted_color = np.clip(np.array([c + o for c, o in zip(color, offset)]), 0, 1)
+        deterministic_palette_hex.append(tuple(adjusted_color))
+
+    return deterministic_palette_hex
 
 # Function to stochastically select a color
 def select_color_from_palette(palette, used_colors):
@@ -199,6 +201,7 @@ def select_color_from_palette(palette, used_colors):
     while color in used_colors:
         i += 1
         color = palette[i]
+        #print(i)
     return color
 
 # Function to assign color
@@ -709,12 +712,20 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
             melted_1 = recov.melt(id_vars='model', value_vars=recov.columns, var_name="variable", value_name="value")
             recov = melted_1
             recov['variable'] = recov['variable'].str.strip('%').astype(float)
+            # Sort the DataFrame to move 'random_dir' to the end
+            # Create a temporary sorting helper column
+            recov['sort_helper'] = recov['model'] == 'random_dir'
+            # Sort by the helper column (False entries first, True entries last)
+            recov = recov.sort_values(by='sort_helper').drop('sort_helper', axis=1)
             cmap = get_color_mapping(recov, 'model')
-
-            for model in recov['model'].unique():
+            
+            for model in models:
                 subset = recov[recov['model']==model]
                 color = cmap[model]
-                sns.lineplot(data=subset, x='variable', y='value', ax=ax_list[i], label=model, color=color)
+                ax_ = sns.lineplot(data=subset, x='variable', y='value', ax=ax_list[i], label=model, color=color)
+            if model == 'random_dir':
+                ax_.lines[-1].set_linestyle('--')
+
             #ax_ = sns.lineplot(data=recov, x='variable', y='value', hue='model', ax=ax_list[i])
             if len(measurements) > 1:
                 ax_list[i].set_xlabel('')
@@ -734,14 +745,21 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
             recov = recov.drop(['measurement', 'model_type', 'class'], axis=1)
             recov = recov.melt(id_vars='model')
             recov['variable'] = recov['variable'].str.strip('$').astype(float)
-
+            # Sort the DataFrame to move 'random_dir' to the end
+            # Create a temporary sorting helper column
+            recov['sort_helper'] = recov['model'] == 'random_dir'
+            # Sort by the helper column (False entries first, True entries last)
+            recov = recov.sort_values(by='sort_helper').drop('sort_helper', axis=1)
+            cmap = get_color_mapping(recov, 'model')
             if not cmap:
                 cmap = get_color_mapping(recov, 'model')
                 
-            for model in recov['model'].unique():
+            for model in models:
                 subset = recov[recov['model']==model]
                 color = cmap[model]
-                sns.lineplot(data=subset, x='variable', y='value', ax=ax_list[i], label=model, color=color)
+                ax_ = sns.lineplot(data=subset, x='variable', y='value', ax=ax_list[i], label=model, color=color)
+            if model == 'random_dir':
+                ax_.lines[-1].set_linestyle('--')
             #ax_ = sns.lineplot(data=recov, x='variable', y='value', hue='model', ax=ax_list[i])
             ax_list[i].set_xlabel('top x% of ranked predictions')
             ax_list[i].set_ylabel('mean stabilizition (kcal/mol)')
@@ -1092,7 +1110,15 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
             ax.set_xlabel(f'100^(NDCG) of {remap_names[ax.get_xlabel()[:-4]]}')
             ax.set_ylabel(f'100^(NDCG) of {remap_names[ax.get_ylabel()[:-4]]}')
         handles, labels = g.ax_joint.get_legend_handles_labels()
-        legend = g.ax_joint.legend(handles, labels, loc='upper left', ncol=1, prop={'size': 15}, bbox_to_anchor=(-0.5, 1))
+
+        for pos in [4,6,8,10,12]:
+            # Assuming you want to add space after the first entry
+            space_handle = mpatches.Patch(color='none', label='')  # Create an invisible handle
+            handles.insert(pos, space_handle)  # Insert at the position after which you want extra space
+            labels.insert(pos, '')  # Corresponding empty label
+
+
+        legend = g.ax_joint.legend(handles, labels, loc='upper left', ncol=1, prop={'size': 15}, bbox_to_anchor=(-0.5, 1), labelspacing=1.2)
         legend.get_frame().set_alpha(0.) 
 
         plt.show()
@@ -1319,9 +1345,10 @@ def compute_stats(
             db_internal = db_internal.loc[
                 ~((db_internal['ddG'] > -1) & (db_internal['ddG'] < 1))
                 ]
-            db_internal = db_internal.loc[
-                ~((db_internal['dTm'] > -2) & (db_internal['dTm'] < 2))
-                ]
+            if 'dTm' in db_internal.columns:
+                db_internal = db_internal.loc[
+                    ~((db_internal['dTm'] > -2) & (db_internal['dTm'] < 2))
+                    ]
 
         # case where there are two split_vals on the same column
         if split_col_2_ is None and split_val_2 is not None:
@@ -1389,26 +1416,28 @@ def compute_stats(
             split = ['']
         # case only one split col
         elif split_col_2_ == 'tmp2':
-            split = [f'{split_col_} > {split_val}', f'{split_col_} <= {split_val}']
+            split = [f'{split_col_} <= {split_val}', f'{split_col_} > {split_val}',]
         # case 2 splits on same col
         elif split_col_ == split_col_2_:
-            split = [f'{split_col_} > {split_val}', f'{split_val} >= {split_col_} > {split_val_2}', f'{split_col_} <= {split_val_2}']
+            split = [f'{split_col_} <= {split_val_2}',
+                     f'{split_val} >= {split_col_} > {split_val_2}', 
+                     f'{split_col_} > {split_val}']
         # case 3 splits total
         elif split_last == False:
-            split = [f'{split_col_2_} > {split_val_2}',
-                    f'{split_col_} > {split_val} & {split_col_2_} <= {split_val_2}',
-                    f'{split_col_} <= {split_val} & {split_col_2_} <= {split_val_2}']
+            split = [f'{split_col_} <= {split_val} & {split_col_2_} <= {split_val_2}',
+                     f'{split_col_} > {split_val} & {split_col_2_} <= {split_val_2}',
+                     f'{split_col_2_} > {split_val_2}']
         # case 3 splits total
         elif split_first == False:
-            split = [f'{split_col_} > {split_val}', 
-                    f'{split_col_} <= {split_val} & {split_col_2_} > {split_val_2}',
-                    f'{split_col_} <= {split_val} & {split_col_2_} <= {split_val_2}']
+            split = [f'{split_col_} <= {split_val} & {split_col_2_} <= {split_val_2}',
+                     f'{split_col_} <= {split_val} & {split_col_2_} > {split_val_2}',
+                     f'{split_col_} > {split_val}']
         # case 2 splits on 2 cols
         else:
-            split = [f'{split_col_} > {split_val} & {split_col_2_} > {split_val_2}', 
-                    f'{split_col_} <= {split_val} & {split_col_2_} > {split_val_2}',
-                    f'{split_col_} > {split_val} & {split_col_2_} <= {split_val_2}',
-                    f'{split_col_} <= {split_val} & {split_col_2_} <= {split_val_2}']
+            split = [f'{split_col_} <= {split_val} & {split_col_2_} <= {split_val_2}',
+                     f'{split_col_} <= {split_val} & {split_col_2_} > {split_val_2}',
+                     f'{split_col_} > {split_val} & {split_col_2_} <= {split_val_2}', 
+                     f'{split_col_} > {split_val} & {split_col_2_} > {split_val_2}']
             #s2 = []
             #for keep, scaffold in zip(keep_scaffolds, split):
             #    if keep:
@@ -1997,11 +2026,13 @@ def model_combinations_heatmap(df, dfm, db_measurements, statistic, measurement,
 
     sns.heatmap(performances, annot=combined_annotations if annot else None, cmap='viridis', cbar=False, fmt='', vmin=threshold, #fmt='.2e' if threshold is not None else '.3f',
         mask=np.triu(np.ones(log_pvals.shape, dtype=bool), k=1), ax=ax, annot_kws={"size": 13})
-    cbar = plt.colorbar(ax.collections[0], ax=ax, location="right", use_gridspec=False, pad=-0.05)
+    cbar = plt.colorbar(ax.collections[0], ax=ax, location="right", use_gridspec=False, pad=-0.0)
+    cbar.ax.tick_params(labelsize=20)
 
     if upper is not None:
         sns.heatmap(pivot_table_2, annot=annot, cmap='coolwarm', cbar=False, vmin=-v, vmax=v, fmt=f'.{sigdigs}f', ax=ax)
         cbar1 = plt.colorbar(ax.collections[1], ax=ax, location="right", use_gridspec=False, pad=0.05)
+        cbar1.ax.tick_params(labelsize=20)
 
     flattened_values = log_pvals[(log_pvals > -10000) & (log_pvals < 10000)].values.ravel()
     flattened_list = [value for value in flattened_values if not np.isnan(value)]
@@ -2178,12 +2209,14 @@ def model_combinations_heatmap_2(df, preds, statistic, direction, upper='corr', 
 
     sns.heatmap(pivot_table, annot=annot, cmap='viridis', cbar=False, fmt='.2f' if threshold is None else '.0f', ax=ax, vmin=threshold,
         annot_kws={"size": 14} if threshold is not None else None)
-    cbar2 = plt.colorbar(ax.collections[0], ax=ax, location="right", use_gridspec=False, pad=-0.05)
+    cbar2 = plt.colorbar(ax.collections[0], ax=ax, location="right", use_gridspec=False, pad=-0.0)
+    cbar2.ax.tick_params(labelsize=20)
     #cbar2.set_label(statistic.upper() + ' for Best Ensemble')
 
     if upper is not None:
         sns.heatmap(pivot_table_2, annot=annot, cmap='coolwarm', cbar=False, vmin=-v, vmax=v, fmt='.2f', ax=ax)
         cbar1 = plt.colorbar(ax.collections[1], ax=ax, location="right", use_gridspec=False, pad=0.05)
+        cbar1.ax.tick_params(labelsize=20)
     
     for tick_label in ax.get_xticklabels():
         tick_label.set_color(determine_base_color(tick_label))
@@ -2447,34 +2480,34 @@ def compare_performance(dbc,
         dbc[f'{split_col} > {threshold_1}'] = dbc[split_col] > threshold_1
         dbc[f'{split_col} <= {threshold_1} & {split_col_2} > {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col_2] > threshold_2)
         dbc[f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col_2] <= threshold_2)
-        vvs = [f'{split_col} > {threshold_1}', 
-                 f'{split_col} <= {threshold_1} & {split_col_2} > {threshold_2}',
-                 f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}']
+        vvs = [f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}',
+               f'{split_col} <= {threshold_1} & {split_col_2} > {threshold_2}',
+               f'{split_col} > {threshold_1}']
     elif split_col_2 is not None and not split_last:
         dbc[f'{split_col_2} > {threshold_2}'] = dbc[split_col_2] > threshold_2
         dbc[f'{split_col} > {threshold_1} & {split_col_2} <= {threshold_2}'] = (dbc[split_col] > threshold_1) & (dbc[split_col_2] <= threshold_2)
         dbc[f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col_2] <= threshold_2)
-        vvs = [f'{split_col_2} > {threshold_2}', 
-                 f'{split_col} > {threshold_1} & {split_col_2} <= {threshold_2}',
-                 f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}']
+        vvs = [f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}',
+               f'{split_col} > {threshold_1} & {split_col_2} <= {threshold_2}',
+               f'{split_col_2} > {threshold_2}']
     elif split_col_2 is not None:
         dbc[f'{split_col} > {threshold_1} & {split_col_2} > {threshold_2}'] = (dbc[split_col] > threshold_1) & (dbc[split_col_2] > threshold_2)
         dbc[f'{split_col} <= {threshold_1} & {split_col_2} > {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col_2] > threshold_2)
         dbc[f'{split_col} > {threshold_1} & {split_col_2} <= {threshold_2}'] = (dbc[split_col] > threshold_1) & (dbc[split_col_2] <= threshold_2)
         dbc[f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col_2] <= threshold_2)
-        vvs = [f'{split_col} > {threshold_1} & {split_col_2} > {threshold_2}', 
-                 f'{split_col} <= {threshold_1} & {split_col_2} > {threshold_2}',
-                 f'{split_col} > {threshold_1} & {split_col_2} <= {threshold_2}',
-                 f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}']
+        vvs = [f'{split_col} <= {threshold_1} & {split_col_2} <= {threshold_2}',
+               f'{split_col} <= {threshold_1} & {split_col_2} > {threshold_2}',
+               f'{split_col} > {threshold_1} & {split_col_2} <= {threshold_2}',
+               f'{split_col} > {threshold_1} & {split_col_2} > {threshold_2}']
     elif threshold_2 is None:
         dbc[f'{split_col} > {threshold_1}'] = dbc[split_col] > threshold_1
         dbc[f'{split_col} <= {threshold_1}'] = dbc[split_col] <= threshold_1
-        vvs = [f'{split_col} > {threshold_1}', f'{split_col} <= {threshold_1}']
+        vvs = [ f'{split_col} <= {threshold_1}', f'{split_col} > {threshold_1}']
     else:
         dbc[f'{split_col} > {threshold_1}'] = dbc[split_col] > threshold_1
         dbc[f'{threshold_1} >= {split_col} > {threshold_2}'] = (dbc[split_col] <= threshold_1) & (dbc[split_col] > threshold_2)
         dbc[f'{split_col} <= {threshold_2}'] = dbc[split_col] <= threshold_2
-        vvs = [f'{split_col} > {threshold_1}', f'{threshold_1} >= {split_col} > {threshold_2}', f'{split_col} <= {threshold_2}']
+        vvs = [f'{split_col} <= {threshold_2}', f'{threshold_1} >= {split_col} > {threshold_2}', f'{split_col} > {threshold_1}',]
 
     print(vvs)
     dbc = dbc.dropna(subset=measurement)
@@ -2496,7 +2529,7 @@ def compare_performance(dbc,
         ax2 = fig.add_axes([0, 0, 0, 0], visible=False, sharex=ax1)
 
     # Scaffold-wise predicted distribution
-    my_palette = ["#34aeeb", "#eb9334", "#3452eb", "#eb4634"]
+    my_palette = ['#d01c8b','#f1b6da','#4dac26','#b8e186'] #["#34aeeb", "#eb9334", "#3452eb", "#eb4634"]
     legend_elements = sns.boxplot(data=ungrouped1,x='variable',y='value',hue=f'split',ax=ax2, palette=my_palette).legend_
                         # split=True if threshold_2 is None else False, bw=0.2, cut=0,
     labels = [t.get_text() for t in legend_elements.texts]
@@ -2544,7 +2577,7 @@ def compare_performance(dbc,
 
     if plots == 'both':
         ax1.legend(handles=new_legend_elements, loc=legend_loc)
-        ax2.legend(handles=new_legend_elements, loc=legend_loc)
+        ax2.legend(handles=new_legend_elements, loc='lower left')
     if plots == 'top':
         ax1.set_xticks(ax1.get_xticks(), categories, rotation=45, ha='right')
         for tick_label in ax1.get_xticklabels():
@@ -3540,7 +3573,7 @@ def compare_distributions_boxes(dfs, shared_columns=None, sources=None, kind='st
     # Plot a distribution plot for each shared column
     plt.figure(figsize=(12, 6))
     if kind == 'strip':
-        ax = sns.stripplot(x='variable', y='value', hue='Source', data=melted_df, dodge=True, alpha=0.05, jitter=0.3)
+        ax = sns.stripplot(x='variable', y='value', hue='Source', data=melted_df, dodge=True, alpha=0.05, jitter=0.3, palette=sns.color_palette('tab10'))
     elif kind == 'boxen':
         ax = sns.boxenplot(x='variable', y='value', hue='Source', data=melted_df)
     elif kind == 'violinplot':
@@ -3637,7 +3670,7 @@ def bootstrap_table(df,
     df = df.sort_values(f'{sort_col}_mean', ascending=False if sort_order=='descending' else True).dropna(how='all', axis=1).reset_index()
     tab_cols = [c+'_mean' for c in table_cols] + [c+'_std' for c in table_cols]
     s4 = df[['model', 'model_type']+tab_cols]
-    s4['model'] = s4['model'].replace(remap_names_2)
+    s4['model'] = s4['model'].str[:-4].replace(remap_names)
 
     stds = s4.drop(0).loc[:, [c for c in s4.columns if 'std' in c]].mean()
     stds = pd.DataFrame(stds).T
