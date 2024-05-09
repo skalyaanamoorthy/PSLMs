@@ -347,7 +347,9 @@ You can use the template calls from cluster_inference_scripts in order to determ
 1. When new predictions, features, clusters etc. have been created run:
 	`python analysis_notebooks/postprocessing.py`
 
-2. Run any of the analysis notebooks using Jupyter Notebook (tested in VSCode server). Reduce bootstraps if calculations are taking too long.
+	*This step is expected to take <2 minutes and should update all of the data/analysis/{dataset}_analysis.csv files using the unzipped Rosetta and homology files.*
+
+3. Run any of the analysis notebooks using Jupyter Notebook (tested in VSCode server). Reduce bootstraps if calculations are taking too long.
 
 
 
