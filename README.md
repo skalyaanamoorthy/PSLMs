@@ -17,7 +17,8 @@ This repository is for facilitating access to and benchmarking self-supervised d
   * up to 128GB for preprocessing or inference involving MSAs
 * ~45 GB of free space (more if using all inference models)
 * Docker (optional, community edition (docker-ce) version 24.0.5 tested)
-  * Apptainer can be used if Docker is not allowed on clusters, tested version 1.2.4  		
+  * Apptainer can be used if Docker is not allowed on clusters, tested version 1.2.4
+  * NVIDIA container toolkit (e.g. nvidia-docker2) 		
 * Anaconda / Python 3.8 (tested)
   * dependencies included in requirements.txt (additionally requirements_inference.txt for running inference)
 * HMMER (if generating MSAs, tested version 3.2.1)
