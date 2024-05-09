@@ -345,7 +345,7 @@ You can use the template calls from cluster_inference_scripts in order to determ
 ⚠️**It is not recommended to try to run the Jupyter Notebooks from a Docker instance**
 
 1. When new predictions, features, clusters etc. have been created run:
-	`python3 analysis_notebooks/postprocessing.py`
+	`python analysis_notebooks/postprocessing.py`
 
 2. Run any of the analysis notebooks using Jupyter Notebook (tested in VSCode server). Reduce bootstraps if calculations are taking too long.
 
