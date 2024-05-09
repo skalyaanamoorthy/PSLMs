@@ -1090,6 +1090,7 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
         #axs[0,0].set_xlim((-1, 1))
         #sns.scatterplot(ax=axs[1,1], data=g, x=score_name, y='measurement', hue='type', alpha=0.3)
         g = sns.jointplot(data=data, x=score_name_2, y=score_name, hue='type', kind='hist', marginal_kws=dict(bins=20), joint_kws=dict(alpha=0), height=10)
+        g.fig.set_dpi(300)
         min_size = data['n mutants'].min() * 5
         max_size = data['n mutants'].max() * 5
         for code, row in data.reset_index().iterrows():
