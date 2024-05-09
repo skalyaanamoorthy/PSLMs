@@ -13,13 +13,13 @@ This repository is for facilitating access to and benchmarking self-supervised d
 * NVIDIA GPU (if running inference)
   * tested on A100, RTX 3090
 * NVIDIA CUDA (tested v11.4, 12.2) and CUDNN (if running inference)
+* High RAM
+  * up to 128GB for preprocessing or inference involving MSAs
 * ~45 GB of free space (more if using all inference models)
 * Docker (optional, community edition (docker-ce) version 24.0.5 tested)
   * Apptainer can be used if Docker is not allowed on clusters, tested version 1.2.4  		
 * Anaconda / Python 3.8 (tested)
   * dependencies included in requirements.txt (additionally requirements_inference.txt for running inference)
-* High RAM
-  * up to 128GB for preprocessing or inference involving MSAs
 * HMMER (if generating MSAs, tested version 3.2.1)
 * Git LFS (if examining or analyzing reported data, including re-running notebooks)
 * MMSeqs2 (if doing sequence clustering, version 13-45111+ds-2 tested)
