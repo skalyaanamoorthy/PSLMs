@@ -43,12 +43,12 @@ We recommend demoing the more thoroughly documented and tidy analysis_notebooks/
 
 ℹ️ Only general setup is required to demo analysis notebooks.
 
-The expected installation time for basic functionality is >10 minutes, assuming you only install the first requirements.txt. Approximatly 30 minutes would be required to install CUDA / CUDNN / Pytorch and inference_requirements but depends on internet connection. Similarly, installation time for tested models for inference depends on the internet connection speed, as some models are many GiB in size.
+The expected installation time for basic functionality is >10 minutes, assuming you only install the first requirements.txt. Approximately 45 minutes is required to install all CUDA / CUDNN / Pytorch, inference_requirements and auxiliary software (which the Docker setup does) but depends on internet connection. Similarly, installation time for tested models for inference depends on the internet connection speed, as some models are many GiB in size. A full Docker-based demo, including image creation, data preprocessing for one dataset, and inference using one model, may take as long as 90 minutes (mostly for downloading models and packages).
 
 The sections after general setup are for reproducing the experiments starting from raw data.
 
 ### Docker Setup 
-ℹ️ **This section is the easiest option for running inference and completely reproducing the analyses.**
+ℹ️ **This section is the easiest option for running inference and completely reproducing the analyses. Creating the image may take upwards of an hour.**
 
 ⚠️⏬ **If you are only interested in demoing notebooks, skip to the General Setup section.**
 
@@ -223,7 +223,11 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 
 	`python preprocessing/preprocess.py --dataset q3421`
 
-4. Repeat this with the other datasets you intend to run inference on e.g. k3822, s669, s461, fireprot, etc.
+	This step is expected to take ~10 minutes each for the two larger datasets (Q3421 and K2369) and updates the file `./data/preprocessed/{dataset}_mapped.csv`.
+
+5. Repeat this with the other datasets you intend to run inference on e.g. k3822, s669, s461, fireprot, etc.
+   
+6. **If running demo: Skip to Inference and Analysis section.** 
 
 #### Notes:
 
@@ -324,6 +328,8 @@ export FATCAT=/home/sareeves/software/FATCAT-dist
 1. You can run any of the inference scripts in inference_scripts. You can copy commands from the associated `cluster_inference_scripts` for convenience and prototypes. Note that ProteinMPNN and Tranception require the location where the GitHub repository was installed as arguments. e.g.:
 
 	`python inference_scripts/mpnn.py --db_loc 'data/preprocessed/q3421_mapped.csv' --output 'data/inference/q3421_mapped_preds.csv' --mpnn_loc ./ProteinMPNN --noise '20'`
+
+	This step is expected to take <2 minutes and should update the designated output file.
 
 ⚠️ **Due to the use of relative paths in the _mapped.csv, you must call inference scripts from the root of the repository! Again, note that you must specify the install location for ProteinMPNN, Tranception, and KORPM because they originate from repositories.**
 
