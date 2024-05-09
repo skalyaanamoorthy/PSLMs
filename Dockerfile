@@ -56,20 +56,23 @@ RUN . /opt/venv/bin/activate && \
     pip install torch && \
     pip install -r requirements_inference.txt --no-deps
 
-# OPTIONAL SECTION: For download prediction tools which are not Python packages
 # COMMENT OUT tools you don't need or that break your installation
-# Note that these have not been tested on other systems
+
+# AliStat for getting statistics from alignments (for analysis, not inference)
 RUN git clone https://github.com/thomaskf/AliStat && \
     cd AliStat && \
     make
 
+# ProteinMPNN SOA inverse-folding model (structural PSLM)
 RUN git clone https://github.com/dauparas/ProteinMPNN
 
+# Tranception MSA-dependent sequence PSLM
 RUN git clone https://github.com/OATML-Markslab/Tranception && \
     curl -o Tranception_Large_checkpoint.zip https://marks.hms.harvard.edu/tranception/Tranception_Large_checkpoint.zip && \
     unzip Tranception_Large_checkpoint.zip && \
     rm Tranception_Large_checkpoint.zip
 
+# statistical potential model (not PSLM)
 RUN git clone https://github.com/chaconlab/korpm && \
     cd korpm/sbg && \
     sh ./compile_korpm.sh && \
@@ -82,8 +85,6 @@ RUN wget https://salilab.org/modeller/10.5/modeller_10.5-1_amd64.deb && \
 RUN chmod +x convenience_scripts/append_modeller_paths.sh && \
     ./convenience_scripts/append_modeller_paths.sh
 ### NOTE: YOU MAY HAVE TO MODIFY THE SCRIPT ABOVE FOR YOUR SYSTEM ###
-
-# END OPTIONAL SECTION
 
 RUN chmod -R 777 /app
 
