@@ -23,7 +23,8 @@ for file1 in ['./data/inference/s669_mapped_preds.csv',
     db = pd.read_csv(file1, index_col=0)
     # two entries get inexplicably duplicated in korpm datasets
     # but only two inconsequential columns are different
-    db = db.loc[~db.index.duplicated(keep='last')]
+    if dataset != 'fireprot':
+        db = db.loc[~db.index.duplicated(keep='last')]
     db['uid2'] = db['code'] + '_' + db['position'].fillna(-1000000).astype(int).astype(str) + db['mutation']
     
     db2 = pd.read_csv(file1.replace('_preds', '').replace('inference', 'preprocessed'), index_col=0)

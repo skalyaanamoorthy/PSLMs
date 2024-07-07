@@ -29,6 +29,7 @@ from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.base import clone
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
+import matplotlib.gridspec as gridspec
 
 
 @contextmanager
@@ -77,6 +78,8 @@ remap_names = {
     'Evo': 'EvoEF',
     'msa_transformer_median': 'MSA-T median',
     'ankh': 'Ankh',
+    'saprot_pdb': 'SaProt PDB',
+    'saprot_af2': 'SaProt AF2',
     'structural': 'Structural',
     'evolutionary': 'Evolutionary',
     'supervised': 'Supervised',
@@ -94,12 +97,14 @@ remap_names = {
     'q3421_pslm_rfa_5': 'Ensemble* 5 Feats',
     'q3421_pslm_rfa_6': 'Ensemble* 6 Feats',
     'q3421_pslm_rfa_7': 'Ensemble* 7 Feats',
+    'q3421_pslm_rfa_8': 'Ensemble* 8 Feats',
     'K1566_pslm_rfa_2': 'Ensemble 2 Feats',
     'K1566_pslm_rfa_3': 'Ensemble 3 Feats',
     'K1566_pslm_rfa_4': 'Ensemble 4 Feats',
     'K1566_pslm_rfa_5': 'Ensemble 5 Feats',
     'K1566_pslm_rfa_6': 'Ensemble 6 Feats',
     'K1566_pslm_rfa_7': 'Ensemble 7 Feats',
+    'K1566_pslm_rfa_8': 'Ensemble 8 Feats',
     'random': 'Gaussian Noise',
     'ddG': 'ΔΔG label', 
     'dTm': 'ΔTm label',
@@ -133,7 +138,7 @@ remap_cols = {  'auprc': 'AUPRC',
 
 # check if these substrings are in the name of a model in order to assign colors
 evolutionary = ['tranception', 'msa_transformer', 'esm1v', 'msa', 'esm2', 'ankh']
-structural = ['mpnn', 'mif', 'mifst', 'esmif', 'mutcomputex']
+structural = ['mpnn', 'mif', 'mifst', 'esmif', 'mutcomputex', 'sapro']
 supervised = ['MAESTRO', 'ThermoNet', 'INPS', 'PremPS', 'mCSM', 'DUET', 'I-Mutant3.0', 'SAAFEC', 'MUpro', 'MuPro']
 untrained = ['DDGun']
 transfer = ['stability-oracle', 'ACDC']
@@ -578,7 +583,7 @@ def make_scatter_chart(df, models, title, figsize=(12, 8), ylim=(-1, 1), use_dua
         ax2.set_ylim(right_y_lim)
 
     if scale_y2:    
-        ax2.set_ylabel('ΔΔG (kcal/mol)', rotation=270, labelpad=20, fontsize=16)# + mean_cols[-1][:-5]
+        ax2.set_ylabel('ΔΔG (kcal/mol)', rotation=270, labelpad=20, fontsize=18)# + mean_cols[-1][:-5]
     #else:
     #    ax2.set_ylabel(
 
@@ -605,7 +610,7 @@ def make_scatter_chart(df, models, title, figsize=(12, 8), ylim=(-1, 1), use_dua
                 ax2.errorbar(x_positions, mean_values, yerr=std_values, fmt=symbol,
                              capsize=3, color=color_dict.get(model, 'black'), label=remap_names.get(model, model) if j == 0 else "_nolegend_")
                 labels = ax2.get_yticklabels()
-                ax2.set_yticklabels(labels, fontsize=12)
+                ax2.set_yticklabels(labels, fontsize=18)
             else:
                 # Plot on primary axis
                 ax.errorbar(x_positions, mean_values, yerr=std_values, fmt=symbol,
@@ -616,11 +621,12 @@ def make_scatter_chart(df, models, title, figsize=(12, 8), ylim=(-1, 1), use_dua
     
     # Correct the ticks and dividers
     ax.set_xticks(np.arange(n_stats))
-    ax.set_xticklabels([col[:-5] for col in mean_cols], rotation=45, ha="right", fontsize=16)
+    ax.set_xticklabels([col[:-5] for col in mean_cols], rotation=45, ha="right", fontsize=18)
     ax.set_xlim(-0.5, n_stats-0.5)
+    ax.set_yticklabels(ax.get_yticklabels(), fontsize=18)
     ax.set_ylim(ylim)
-    ax.legend(title='', bbox_to_anchor=(1.3, 1), loc='upper left', fontsize=16)
-    ax.set_ylabel('Score', fontsize=16)
+    ax.legend(title='', bbox_to_anchor=(1.3, 1), loc='upper left', fontsize=18)
+    ax.set_ylabel('Score', fontsize=18)
     
     # Draw zero lines correctly confined to each column
     for j in range(n_stats):
@@ -632,7 +638,7 @@ def make_scatter_chart(df, models, title, figsize=(12, 8), ylim=(-1, 1), use_dua
 
     #ax.xlabel('Statistic')
     #ax.ylabel('Score', rotation=270, color='black')
-    plt.title(f'Performance on {title}', fontsize=16)
+    plt.title(f'Performance on {title}', fontsize=22)
 
     # Draw the canvas to get the renderer
     #fig1.canvas.draw()
@@ -642,11 +648,12 @@ def make_scatter_chart(df, models, title, figsize=(12, 8), ylim=(-1, 1), use_dua
     
     # Set a new axes rectangle that is always at the same place regardless of the text size
     #ax.set_position([0.1, 0.1, ax_bbox.width, ax_bbox.height])
+    return fig1
 
 
 
 def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'random_dir'], measurements=('dTm', 'ddG'), plots=('auppc', 'aumsc'), 
-    points=[10], left_spacing=0.02, right_spacing=0.02, left_text_offset=(20, 0.07), right_text_offset=(20, 0.07)):
+    points=[10], left_spacing=0.02, right_spacing=0.02, left_text_offset=(20, 0.07), right_text_offset=(20, 0.07), title='Dataset'):
 
     def annotate_points(ax, data, x_col, y_col, hue_col, x_values, text_offset=(0, 0), spacing=0.02):
         line_colors = {}
@@ -660,7 +667,10 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
             for model, model_data in data.groupby(hue_col):
                 value_row = model_data.loc[model_data[x_col] == x_val]
                 if not value_row.empty:
-                    x, y = value_row[x_col].values[0], value_row[y_col].values[0]
+                    if len(value_row) > 1:
+                        x, y = value_row[x_col].values[0], value_row[y_col].values.mean()
+                    else:
+                        x, y = value_row[x_col].values[0], value_row[y_col].values[0]
                     models_and_points.append((model, x, y))
 
             # Sort models_and_points by y values to space them evenly
@@ -672,7 +682,7 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
                 ax.annotate(f"{y:.2f}", (x, y),
                             xytext=(x + text_offset[0], y_annot),
                             arrowprops=dict(arrowstyle='-', lw=1, color='gray'),
-                            fontsize=9, color=line_colors[model])
+                            fontsize=12, color=line_colors[model])
                 y_annot -= spacing
                 ax.axvline(x=x, color='r', linestyle='dashed')
 
@@ -806,6 +816,7 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
     if len(ax_list) > 1:
         for ax in axes.flat:
             ax.get_legend().remove()
+            ax.set_title(title)
     else:
         ax_list[0].get_legend().remove()
 
@@ -815,13 +826,14 @@ def recovery_curves(rcv, models=['cartesian_ddg_dir', 'ddG_dir', 'dTm_dir', 'ran
     fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.), ncol=2)
     plt.tight_layout()
 
-    sp_labels = ['(a)', '(b)', '(c)', '(d)']
+    #sp_labels = ['(a)', '(b)', '(c)', '(d)']
 
-    if len(ax_list) > 1:
-        for i, ax in enumerate(axes.flat):
-            ax.text(-0.05, 1.05, sp_labels[i], transform=ax.transAxes, fontsize=16, va='top')
+    #if len(ax_list) > 1:
+    #    for i, ax in enumerate(axes.flat):
+    #        ax.text(-0.05, 1.05, sp_labels[i], transform=ax.transAxes, fontsize=16, va='top')
 
     plt.show()
+    return fig
 
 
 def recovery_curves_2(rcv, models, percentile_labels, directions=['dir', 'inv']):
@@ -957,9 +969,10 @@ def recovery_curves_2(rcv, models, percentile_labels, directions=['dir', 'inv'])
 
 
 def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bins=20, stat='spearman', runtime=False, 
-                 group=True, valid=False, out=True, plot=False, coeff2=0.2, meas='ddG', measurements=['ddG'], marker_name=None):
+                 group=True, valid=False, out=True, plot=False, coeff2=0.2, meas='ddG', measurements=['ddG'], marker_name=None,
+                 saveloc_comp='../data/extended/figure_data/data_comp.csv'):
 
-    font = {'size'   : 14}
+    font = {'size'   : 12}
     matplotlib.rc('font', **font)
     
     # the first section is for testing combinations of models on the spot by making a custom score name
@@ -1081,6 +1094,11 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
         
     if plot:
         data=i.reset_index()
+        data_out = data.copy(deep=True)
+        data_out.columns = [remap_names_2.get(c,c) for c in data_out.columns]
+        data_out = data_out.drop('type', axis=1)
+        data_out.to_csv(saveloc_comp)
+
         if stat == 'ndcg':
             data[score_name] = 100**data[score_name].astype(float)
             data[score_name_2] = 100**data[score_name_2].astype(float)
@@ -1089,7 +1107,7 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
         #sns.histplot(ax=axs[0,0], x=score_name, data=data[[score_name, 'type']].sort_values('type'), alpha=0.3, hue='type', bins=bins, stat='count', kde=True)
         #axs[0,0].set_xlim((-1, 1))
         #sns.scatterplot(ax=axs[1,1], data=g, x=score_name, y='measurement', hue='type', alpha=0.3)
-        g = sns.jointplot(data=data, x=score_name_2, y=score_name, hue='type', kind='hist', marginal_kws=dict(bins=20), joint_kws=dict(alpha=0), height=10)
+        g = sns.jointplot(data=data, x=score_name_2, y=score_name, hue='type', kind='hist', marginal_kws=dict(bins=20), joint_kws=dict(alpha=0), height=8)
         g.fig.set_dpi(300)
         min_size = data['n mutants'].min() * 5
         max_size = data['n mutants'].max() * 5
@@ -1119,8 +1137,8 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
             labels.insert(pos, '')  # Corresponding empty label
 
 
-        legend = g.ax_joint.legend(handles, labels, loc='upper left', ncol=1, prop={'size': 15}, bbox_to_anchor=(-0.5, 1), labelspacing=1.2)
-        legend.get_frame().set_alpha(0.) 
+        legend = g.ax_joint.legend(handles, labels, loc='upper left', ncol=1, prop={'size': 10}, bbox_to_anchor=(-0.5, 1), labelspacing=1.2)
+        #legend.get_frame().set_alpha(0.) 
 
         plt.show()
         
@@ -1147,12 +1165,12 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
                     df_out.at[(t, f'weighted_{stat}'), score] = np.average(reduced[score], weights=np.log(reduced['n mutants']))
                     if runtime and score_name not in measurements + ['random_dir']:
                         df_out.at[(t, 'runtime (s)'), score] = runs_reduced[f'runtime_{score}'].sum()
-        return df_out
+        return df_out, g
 
-    return i
+    return i, g
 
 
-def correlations_2(db_complete, score_name, score_name_2=None, min_obs=5, bins=20, corr='spearman', out=True, plot=False, direction='dir', highlight=[], annotate=True, color_col=None, scale=1):
+def correlations_2(db_complete, score_name, score_name_2=None, min_obs=5, bins=20, corr='spearman', out=True, plot=False, direction='dir', highlight=[], annotate=True, color_col=None, scale=1, th=0.0):
     print(score_name)
     dbf = db_complete.copy(deep=True)
 
@@ -1232,15 +1250,30 @@ def correlations_2(db_complete, score_name, score_name_2=None, min_obs=5, bins=2
             for idx, row in data.reset_index().iterrows():
                 tmp_data = data.reset_index().drop(idx).loc[(data.reset_index().drop(idx)[score_name]-row[score_name])**2 < threshold]
                 tmp_data_2 = tmp_data.loc[(tmp_data[score_name_2]-row[score_name_2])**2 < threshold]
+                dx = random.uniform(-label_shift, label_shift)
+                dx += 0.01
+                dy = random.uniform(-label_shift, label_shift)
+                dy += 0.01
                 if len(tmp_data_2) > 0:
-                    dx = random.uniform(-label_shift, label_shift)
-                    dx += 0.01
-                    dy = random.uniform(-label_shift, label_shift)
-                    dy += 0.01
                     g.ax_joint.text(row[score_name_2]+dx, row[score_name]+dy, f"{row['code']}:{row['n_muts']}", size=4*5, color='r' if row['code'] in highlight else 'black')
                     g.ax_joint.plot([row[score_name_2], row[score_name_2]+dx], [row[score_name], row[score_name]+dy])
                 else:
                     g.ax_joint.text(row[score_name_2]+0.01, row[score_name]+0.01, f"{row['code']}:{row['n_muts']}", size=4*5, color='r' if row['code'] in highlight else 'black')
+                    g.ax_joint.plot([row[score_name_2], row[score_name_2]+dx], [row[score_name], row[score_name]+dy])
+
+        if th > 0:
+            for idx, row in data.reset_index().iterrows():
+                if np.abs(row[score_name_2]-row[score_name]) > th:
+                    flag = True
+                else:
+                    flag = False
+                if th > 0 and flag:
+                    dx = random.uniform(-label_shift, label_shift)
+                    dx += 0.01
+                    dy = random.uniform(-label_shift, label_shift)
+                    dy += 0.01
+                    g.ax_joint.plot([row[score_name_2], row[score_name_2]+dx], [row[score_name], row[score_name]+dy])
+                    g.ax_joint.text(row[score_name_2]+dx, row[score_name]+dy, f"{row['code']}:{row['n_muts']}", size=4*5, color='g')
 
         sns.scatterplot(data=data, x=score_name_2, y=score_name, size='n_muts', sizes=(2*100*scale,70*100*scale), ax=g.ax_joint, alpha=0.4, hue=color_col)
         small = np.array(i[[score_name_2, score_name]].dropna()).min().min()
@@ -1300,8 +1333,8 @@ def calculate_msc(group, pred_col, percentile_values, meas='ddG'):
 def compute_stats(
     df, 
     split_col=None, split_val=None, split_col_2=None, split_val_2=None, 
-    measurements=['ddG', 'dTm'], stats=(), n_classes=2, quiet=False, 
-    grouper='code', n_bootstraps=-1, split_first=True, split_last=True,
+    measurements=('ddG', 'dTm'), stats=(), n_classes=2, quiet=False, 
+    grouper=('code'), n_bootstraps=-1, split_first=True, split_last=True,
     ):
     """
     Computes all per-protein and per-dataset stats, including when splitting
@@ -1334,7 +1367,7 @@ def compute_stats(
             if index_names == [None]:
                 db_internal.index.name = 'uid_sym'
                 index_names = ['uid_sym']
-            db_grouper = db_internal[[grouper]].reset_index().drop_duplicates()
+            db_grouper = db_internal[grouper].reset_index().drop_duplicates()
             db_grouper = db_grouper.set_index(index_names)
             db_internal = db_internal.drop(grouper, axis=1)
         # currently, grouper cant be None
@@ -1652,24 +1685,28 @@ def compute_stats(
                         df_out.loc[(meas,sp,col), 'mean_t1s'] = top_1_stab / len(pred_df_cont[grouper].unique())
 
                     # inverse of the assigned rank of the number one most stable protein per group
-                    if ('mean_reciprocal_rank' in stats) or (stats == ()): 
-                        reciprocal_rank_sum = 0
-                        unique_groups = pred_df_cont[grouper].unique()
-                        for code, group in pred_df_cont.groupby(grouper):
-                            group = group.drop_duplicates()
-                            sorted_group = group.sort_values(col, ascending=False)
-                            highest_meas_rank = sorted_group[meas].idxmax()
+                    #if ('mean_reciprocal_rank' in stats) or (stats == ()): 
+                    #    reciprocal_rank_sum = 0
+                    #    unique_groups = pred_df_cont[grouper].unique()
+                    #    for code, group in pred_df_cont.groupby(grouper):
+                    #        group = group.drop_duplicates()
+                    #        sorted_group = group.sort_values(col, ascending=False)
+                    #        highest_meas_rank = sorted_group[meas].idxmax()
 
-                            rank_of_highest_meas = sorted_group.index.get_loc(highest_meas_rank)
-                            if type(rank_of_highest_meas) == slice:
-                                print('Something went wrong with MRR for', col, code)
-                                continue
+                    #        rank_of_highest_meas = sorted_group.index.get_loc(highest_meas_rank)
+                    #        if type(rank_of_highest_meas) in [slice, list, bool]:
+                    #            print('Something went wrong with MRR for', col, code)
+                    #            continue
+                    #        try:
+                    #            rank_of_highest_meas += 1
+                    #        except:
+                    #            print('Something went wrong with MRR for', col, code)
+                    #            continue
 
-                            rank_of_highest_meas += 1
-                            reciprocal_rank_sum += 1 / rank_of_highest_meas
+                    #        reciprocal_rank_sum += 1 / rank_of_highest_meas
 
-                        mean_reciprocal_rank = reciprocal_rank_sum / len(unique_groups)
-                        df_out.loc[(meas, sp, col), 'mean_reciprocal_rank'] = mean_reciprocal_rank
+                    #    mean_reciprocal_rank = reciprocal_rank_sum / len(unique_groups)
+                    #    df_out.loc[(meas, sp, col), 'mean_reciprocal_rank'] = mean_reciprocal_rank
                     
                     # normalized discounted cumulative gain, a measure of information retrieval ability
                     if ('ndcg' in stats) or (stats == ()):
@@ -1953,7 +1990,7 @@ def calculate_p_values(df, ground_truth_col, statistic, n_bootstraps=100, groupe
     return p_values, mean_values, std_values, df_out
 
 
-def model_combinations_heatmap(df, dfm, db_measurements, statistic, measurement, n_bootstraps=100, threshold=None, subset=None, sigdigs=3, upper=None, grouper='cluster', noise=0, annot=True, title=None):
+def model_combinations_heatmap(df, dfm, db_measurements, statistic, measurement, n_bootstraps=100, threshold=None, subset=None, sigdigs=3, upper=None, grouper='cluster', noise=0, annot=True, title=None, saveloc_table='../data/extended/figure_data/data_heatmap.csv'):
 
     font = {'size'   : 14}
     matplotlib.rc('font', **font)
@@ -1969,7 +2006,7 @@ def model_combinations_heatmap(df, dfm, db_measurements, statistic, measurement,
 
     df = df[['model1', 'weight1', 'model2', 'weight2', statistic, 'runtime']]
 
-    fig, ax = plt.subplots(figsize=(20,15), dpi=300)
+    fig, ax = plt.subplots(figsize=(20,12), dpi=300)
 
     pdf = df.copy(deep=True).reset_index(drop=True).sort_values(statistic, ascending=False).reset_index(drop=True)
 
@@ -2027,13 +2064,21 @@ def model_combinations_heatmap(df, dfm, db_measurements, statistic, measurement,
 
     sns.heatmap(performances, annot=combined_annotations if annot else None, cmap='viridis', cbar=False, fmt='', vmin=threshold, #fmt='.2e' if threshold is not None else '.3f',
         mask=np.triu(np.ones(log_pvals.shape, dtype=bool), k=1), ax=ax, annot_kws={"size": 13})
-    cbar = plt.colorbar(ax.collections[0], ax=ax, location="right", use_gridspec=False, pad=-0.0)
-    cbar.ax.tick_params(labelsize=20)
+    cbar = plt.colorbar(ax.collections[0], ax=ax, location="right", use_gridspec=False, pad=0.03)
+    cbar.ax.tick_params(labelsize=30)
 
     if upper is not None:
         sns.heatmap(pivot_table_2, annot=annot, cmap='coolwarm', cbar=False, vmin=-v, vmax=v, fmt=f'.{sigdigs}f', ax=ax)
-        cbar1 = plt.colorbar(ax.collections[1], ax=ax, location="right", use_gridspec=False, pad=0.05)
-        cbar1.ax.tick_params(labelsize=20)
+        cbar1 = plt.colorbar(ax.collections[1], ax=ax, location="right", use_gridspec=False, pad=0.1)
+        cbar1.ax.tick_params(labelsize=30)
+
+    table_out = performances * np.tril(np.ones(log_pvals.shape, dtype=bool), k=0) + pivot_table_2.fillna(0)
+    table_out.index.name = 'model1'
+    table_out = table_out.reset_index() 
+    table_out['model1'] = table_out['model1'].apply(lambda x: remap_names_2.get(x, x.replace('_dir', '')))
+    table_out = table_out.set_index('model1')
+    table_out.columns = table_out.index
+    table_out.to_csv(saveloc_table)
 
     flattened_values = log_pvals[(log_pvals > -10000) & (log_pvals < 10000)].values.ravel()
     flattened_list = [value for value in flattened_values if not np.isnan(value)]
@@ -2063,16 +2108,16 @@ def model_combinations_heatmap(df, dfm, db_measurements, statistic, measurement,
     if upper == None:
         plt.title(f'Prediction {statistic} of Models', fontsize=50, fontweight='bold')
     else:
-        plt.text(1.02, 0.5, 'Improvement Over Best Constituent', va='center', ha='center', fontsize=36, rotation=270, rotation_mode='anchor', transform=plt.gca().transAxes)
-        plt.text(-0.28, 0.5, f'Max {statistic_} of Model Combinations', va='center', ha='center', fontsize=36, rotation=90, rotation_mode='anchor', transform=plt.gca().transAxes)
+        plt.text(1.05, 0.5, 'Improvement Over Best Constituent', va='center', ha='center', fontsize=36, rotation=270, rotation_mode='anchor', transform=plt.gca().transAxes)
+        plt.text(-0.4, 0.5, f'Max {statistic_} of Model Combinations', va='center', ha='center', fontsize=36, rotation=90, rotation_mode='anchor', transform=plt.gca().transAxes)
 
     plt.ylabel(None)
     plt.xlabel(None)
-    plt.xticks(fontsize=22, rotation=90)
-    plt.yticks(fontsize=22, rotation=0)
+    plt.xticks(fontsize=26, rotation=90)
+    plt.yticks(fontsize=26, rotation=0)
     plt.show()
 
-    return stat_df, log_pvals
+    return stat_df, log_pvals, fig
 
 def get_stat_df(df, statistic, new_dir, preds=None):
     # Extract unique models from the DataFrame
@@ -2146,7 +2191,7 @@ def get_stat_df(df, statistic, new_dir, preds=None):
     return stat_df
 
 
-def model_combinations_heatmap_2(df, preds, statistic, direction, upper='corr', threshold=None, subset=None, annot=True, title=None):
+def model_combinations_heatmap_2(df, preds, statistic, direction, upper='corr', threshold=None, subset=None, annot=True, title=None, saveloc_table='../data/extended/figure_data/data_heatmap.csv'):
 
     font = {'size'   : 10}
     matplotlib.rc('font', **font)
@@ -2161,7 +2206,7 @@ def model_combinations_heatmap_2(df, preds, statistic, direction, upper='corr', 
     if subset is not None:
         df = df_slice.loc[df_slice['model1'].isin(subset) & df_slice['model2'].isin(subset)]
 
-    fig, ax = plt.subplots(figsize=(20,15), dpi=300)
+    fig, ax = plt.subplots(figsize=(20,12), dpi=300)
 
     if direction == 'combined':
         new_dir = ''
@@ -2210,14 +2255,21 @@ def model_combinations_heatmap_2(df, preds, statistic, direction, upper='corr', 
 
     sns.heatmap(pivot_table, annot=annot, cmap='viridis', cbar=False, fmt='.2f' if threshold is None else '.0f', ax=ax, vmin=threshold,
         annot_kws={"size": 14} if threshold is not None else None)
-    cbar2 = plt.colorbar(ax.collections[0], ax=ax, location="right", use_gridspec=False, pad=-0.0)
-    cbar2.ax.tick_params(labelsize=20)
+    cbar2 = plt.colorbar(ax.collections[0], ax=ax, location="right", use_gridspec=False, pad=0.03)
+    cbar2.ax.tick_params(labelsize=30)
     #cbar2.set_label(statistic.upper() + ' for Best Ensemble')
 
     if upper is not None:
         sns.heatmap(pivot_table_2, annot=annot, cmap='coolwarm', cbar=False, vmin=-v, vmax=v, fmt='.2f', ax=ax)
-        cbar1 = plt.colorbar(ax.collections[1], ax=ax, location="right", use_gridspec=False, pad=0.05)
-        cbar1.ax.tick_params(labelsize=20)
+        cbar1 = plt.colorbar(ax.collections[1], ax=ax, location="right", use_gridspec=False, pad=0.1)
+        cbar1.ax.tick_params(labelsize=30)
+
+    table_out = pivot_table.fillna(0) + pivot_table_2.fillna(0)
+    table_out = table_out.reset_index() 
+    table_out['model1'] = table_out['model1'].apply(lambda x: remap_names.get(x, x))
+    table_out = table_out.set_index('model1')
+    table_out.columns = table_out.index
+    table_out.to_csv(saveloc_table)
     
     for tick_label in ax.get_xticklabels():
         tick_label.set_color(determine_base_color(tick_label))
@@ -2241,17 +2293,17 @@ def model_combinations_heatmap_2(df, preds, statistic, direction, upper='corr', 
     if upper == None:
         plt.title(f'Prediction {statistic} of Models', fontsize=50, fontweight='bold')
     else:
-        plt.text(1.02, 0.5, 'Improvement Over Best Constituent', va='center', ha='center', fontsize=36, rotation=270, rotation_mode='anchor', transform=plt.gca().transAxes)
-        plt.text(-0.28, 0.5, f'Max {statistic_} of Model Combinations', va='center', ha='center', fontsize=36, rotation=90, rotation_mode='anchor', transform=plt.gca().transAxes)
+        plt.text(1.05, 0.5, 'Improvement Over Best Constituent', va='center', ha='center', fontsize=36, rotation=270, rotation_mode='anchor', transform=plt.gca().transAxes)
+        plt.text(-0.4, 0.5, f'Max {statistic_} of Model Combinations', va='center', ha='center', fontsize=36, rotation=90, rotation_mode='anchor', transform=plt.gca().transAxes)
     #plt.ylabel('Reference model')
     #plt.xlabel('Added Model')
     plt.ylabel(None)
     plt.xlabel(None)
-    plt.xticks(fontsize=22, rotation=90)
-    plt.yticks(fontsize=22, rotation=0)
+    plt.xticks(fontsize=26, rotation=90)
+    plt.yticks(fontsize=26, rotation=0)
     plt.show()
 
-    return stat_df
+    return stat_df, fig
 
 
 def custom_barplot(data, x, y, hue, width, ax, use_color=None, legend_labels=None, legend_colors=None, std=True, capsize=5):
@@ -2324,9 +2376,9 @@ def custom_barplot(data, x, y, hue, width, ax, use_color=None, legend_labels=Non
         ax.axhline(y=y_max, color=color, linestyle='dashed')
 
     ax.set_xticks(np.arange(len(unique_x)))
-    ax.set_xticklabels(unique_x)
-    ax.set_xlabel(x)
-    ax.set_ylabel(y)
+    ax.set_xticklabels(unique_x, fontsize=28)
+    ax.set_xlabel(x, fontsize=28)
+    ax.set_ylabel(y, fontsize=28)
 
     if legend_labels is not None and legend_colors is not None:
         legend_elements = [Patch(facecolor=lut[hue_value], label=f'{hue_value}: {int(width_value)}') for hue_value, width_value in zip(unique_hue, unique_width)]
@@ -2358,7 +2410,9 @@ def compare_performance(dbc,
                         double_asterisk = (),
                         split_first = True,
                         split_last = True,
-                        legend_loc = 'lower left'
+                        legend_loc = 'lower left',
+                        saveloc_perf = '../data/extended/figure_data/perf_data.csv',
+                        saveloc_dist = '../data/extended/figure_data/dist_data.csv'
                         ):
 
     rename_dict = {'delta_kdh': 'Δ hydrophobicity', 'delta_vol': 'Δ volume', 'rel_ASA': 'relative ASA', 'neff': 'N eff. seqs'}
@@ -2369,8 +2423,8 @@ def compare_performance(dbc,
     if statistic_2 is None:
         statistic_2 = statistic
 
-    font = {'size'   : 20}
-    matplotlib.rc('font', **font)
+    #font = {'size'   : 20}
+    #matplotlib.rc('font', **font)
 
     if plots == 'both':
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15,17.25), sharex=True, dpi=300)
@@ -2529,6 +2583,7 @@ def compare_performance(dbc,
     if plots not in ['bottom', 'both']:
         ax2 = fig.add_axes([0, 0, 0, 0], visible=False, sharex=ax1)
 
+    full_quants = ungrouped1.groupby(['split', 'variable']).count().groupby('split').first()
     # Scaffold-wise predicted distribution
     my_palette = ['#d01c8b','#f1b6da','#4dac26','#b8e186'] #["#34aeeb", "#eb9334", "#3452eb", "#eb4634"]
     legend_elements = sns.boxplot(data=ungrouped1,x='variable',y='value',hue=f'split',ax=ax2, palette=my_palette).legend_
@@ -2536,58 +2591,93 @@ def compare_performance(dbc,
     labels = [t.get_text() for t in legend_elements.texts]
     colors = [c.get_facecolor() for c in legend_elements.legendHandles]
 
-    ax2.set_title(title_prefix + ' scaffold-wise predicted distribution')
-    ax2.set_ylabel('stability or Δ log-likelihood')
+    ax2.set_title(title_prefix + ' scaffold-wise predicted distribution', fontsize=28)
+    ax2.set_ylabel('stability or Δ log-likelihood', fontsize=28)
     ax2.set_xlabel('')
     ax2.grid()
     ax2.yaxis.grid(False)
     ax2.axhline(y=0, color='r', linestyle='dashed')
+
+    splits_out = splits.reset_index().drop(['index', 'runtime'], axis=1)
+    splits_out['model'] = splits_out['model'].apply(lambda x: remap_names_2.get(x, x))
+    splits_out.to_csv(saveloc_perf, encoding='utf-8-sig')
+    dbc_out = dbc.copy(deep=True).rename({'split': 'split', 'variable': 'model', 'value': 'prediction'}, axis=1)
+    dbc_out['model'] = dbc_out['model'].apply(lambda x: remap_names_2.get(x, x))
+    dbc_out.to_csv(saveloc_dist, encoding='utf-8-sig')
 
     if plots in ['top', 'both']:
         legend_elements = custom_barplot(data=splits.drop_duplicates(), x='model', y=statistic_2, hue='class', width='n', ax=ax1, legend_colors=colors, legend_labels=labels)
         _ = custom_barplot(data=ungrouped.reset_index().set_index('model').loc[ungrouped0['model']].drop_duplicates().reset_index(), 
                     x='model', y=statistic_2, hue='class', width='n', ax=ax1, use_color='grey', std=False) #capsize=12
 
-        statistic_ = {'weighted_ndcg': 'wNDCG', 'weighted_spearman': 'wρ', 'weighted_auprc': 'wAUPRC', 'auprc': 'AUPRC', 'spearman': 'ρ', 'PPV': 'PPV', 'accuracy': 'Accuracy', 'MCC': 'MCC'}[statistic_2]
-        ax1.set_title(title_prefix + ' scaffold-wise mean performance') #'Delta vs. split mean'
-        ax1.set_ylabel(statistic_)
+        statistic_ = {'weighted_ndcg': 'wNDCG', 'weighted_spearman': 'wρ', 'weighted_auprc': 'wAUPRC', 'auprc': 'AUPRC', 'spearman': 'Spearman\'s ρ', 'PPV': 'PPV', 'accuracy': 'Accuracy', 'MCC': 'MCC'}[statistic_2]
+        ax1.set_title(title_prefix + ' scaffold-wise mean performance', fontsize=28) #'Delta vs. split mean'
+        ax1.set_ylabel(statistic_, fontsize=28)
         ax1.grid()
         ax1.yaxis.grid(False)
         ax1.set_xlabel('')
 
     new_legend_elements = []
+    new_legend_elements_lower = []
+
+    import copy
+
     try:
         legend_elements[0]
     except TypeError:
         legend_elements = [legend_elements]
     for legend_element in legend_elements:
         original_label = legend_element.get_label()
+        new_label = legend_element.get_label()
+        legend_element_2 = copy.deepcopy(legend_element)
+
+        if plots in ['both', 'bottom']:
+            cat = new_label.split(':')[0]
+            num = new_label.split(':')[-1]
+            print(new_label)
+            new_label = new_label.replace(num, f' {full_quants.loc[cat].item()}')
+            print(new_label)
+            legend_element_2.set_label(new_label)
+
         if 'conservation' in original_label:
             original_label = original_label.split(':')
             original_label = original_label[0] + '% :' + original_label[1]
             legend_element.set_label(original_label)
-            print(original_label)
+
+            new_label = new_label.split(':')
+            new_label = new_label[0] + '% :' + new_label[1]
+            legend_element_2.set_label(new_label)
+
         for key in rename_dict.keys():
             if key in original_label:
                 original_label = original_label.replace(key, rename_dict[key])
+                new_label = new_label.replace(key, rename_dict[key])
                 # Update label if it exists in the dictionary
                 #if original_label in rename_dict:
                 legend_element.set_label(original_label)
+                legend_element_2.set_label(new_label)
+        
         new_legend_elements.append(legend_element)
+        new_legend_elements_lower.append(legend_element_2)
+    
         #print('nle', new_legend_elements)
 
     if plots == 'both':
-        ax1.legend(handles=new_legend_elements, loc=legend_loc)
-        ax2.legend(handles=new_legend_elements, loc='lower left')
+        ax1.legend(handles=new_legend_elements, loc=legend_loc, fontsize=22)
+        ax2.legend(handles=new_legend_elements_lower, loc='lower left', fontsize=22)
+        ax1.set_yticklabels(ax1.get_yticklabels(), fontsize=28)
+        ax2.set_yticklabels(ax2.get_yticklabels(), fontsize=28)
     if plots == 'top':
-        ax1.set_xticks(ax1.get_xticks(), categories, rotation=45, ha='right')
+        ax1.set_xticks(ax1.get_xticks(), categories, rotation=45, ha='right', fontsize=24)
         for tick_label in ax1.get_xticklabels():
             tick_label.set_color(determine_base_color(tick_label))
-        ax1.legend(handles=new_legend_elements, loc=legend_loc)
+        ax1.legend(handles=new_legend_elements, loc=legend_loc, fontsize=22)
+        ax1.set_yticklabels(ax1.get_yticklabels(), fontsize=28)
     elif plots in ['both', 'bottom']:
-        ax2.set_xticks(ax2.get_xticks(), categories, rotation=45, ha='right')
+        ax2.set_xticks(ax2.get_xticks(), categories, rotation=45, ha='right', fontsize=24)
         for tick_label in ax2.get_xticklabels():
             tick_label.set_color(determine_base_color(tick_label))
+            
         #print([tick.get_text() for tick in ax2.get_xticklabels()])
         #ax2.legend(handles=new_legend_elements, loc=legend_loc)
     
@@ -2599,9 +2689,9 @@ def compare_performance(dbc,
 
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
 
-    print(splits.groupby('class')['n'].max())
+    print(splits.groupby('class')['n'].mean().astype(int))
     plt.show()
-    return splits, ungrouped0['model']
+    return splits, ungrouped0['model'], fig
 
 
 def stack_frames(dbf):
@@ -3372,24 +3462,40 @@ def compute_stats_bidirectional(db_gt_preds, split_col=None, split_val=None, spl
     return df_out.dropna(how='all')
 
 
-def custom_recursive_feature_addition(df_train, dfs_test, cols, target, model, lines='cartesian_ddg_dir', fillna=False, source='unknown', max_feats=8):
+def custom_recursive_feature_addition(df_train, dfs_test, cols, target, model, lines='cartesian_ddg_dir', fillna=False, source='unknown', max_feats=8, bs=0, 
+                                      saveloc_upper='../data/extended/figure_data/data_upper.csv', saveloc_lower='../data/extended/figure_data/data_lower.csv'):
        
     remaining_features = deepcopy(cols)
     selected_features = []
     spearman_scores = []
-    test_scores = pd.DataFrame(columns=[name[0].upper() + name[1:] for name in dfs_test.keys()], index=range(1, len(cols)+1))
+    if bool(bs):
+        column_tuples = [(name[0].upper() + name[1:], str(i)) for name in dfs_test.keys() for i in range(bs)]
+        multiindex_columns = pd.MultiIndex.from_tuples(column_tuples, names=['dataset', 'bootstrap'])
+        test_scores = pd.DataFrame(columns=multiindex_columns, index=range(1, len(cols)+1))
+        lines_scores = pd.DataFrame(index=multiindex_columns, columns=[lines])
+    else:
+        test_scores = pd.DataFrame(columns=[name[0].upper() + name[1:] for name in dfs_test.keys()], index=range(1, len(cols)+1))
+        lines_scores = pd.DataFrame(index=[name[0].upper() + name[1:] for name in dfs_test.keys()], columns=[lines])
     weights_df = pd.DataFrame(columns=cols, index=range(1, len(cols)+1))
-    lines_scores = {}
 
     scaler = StandardScaler()
     df_train[cols] = scaler.fit_transform(df_train[cols])
     y_train = df_train[target]
 
-    # Calculate the Spearman correlation for the 'lines' column
-    for name_, df_test in dfs_test.items():
-        name = name_[0].upper() + name_[1:]
-        score, _ = spearmanr(df_test[lines], df_test[target])
-        lines_scores[name] = score
+    if bs:
+         for name_, df_test_list in dfs_test.items():
+            print(name_)
+            for rep in range(bs):
+                df_test = df_test_list[rep]
+                name = name_[0].upper() + name_[1:]
+                score, _ = spearmanr(df_test[lines], df_test[target])
+                lines_scores.at[(name, rep), lines] = score       
+    else:
+        # Calculate the Spearman correlation for the 'lines' column
+        for name_, df_test in dfs_test.items():
+            name = name_[0].upper() + name_[1:]
+            score, _ = spearmanr(df_test[lines], df_test[target])
+            lines_scores.at[name, lines] = score
 
     while len(remaining_features) > 0:
         best_score = -np.inf
@@ -3422,24 +3528,49 @@ def custom_recursive_feature_addition(df_train, dfs_test, cols, target, model, l
 
         #print(f"Added {best_feature}, Spearman Correlation: {best_score}")
 
-        for name_, df_test in dfs_test.items():
-            name = name_[0].upper() + name_[1:]
-            X_train = df_train[selected_features]
-            model_clone = clone(model)
-            model_clone.fit(X_train, y_train)
+        if bs:
+            for name_, df_test_list in dfs_test.items():
+                for rep in range(bs):
+                    df_test = df_test_list[rep]
+                    name = name_[0].upper() + name_[1:]
+                    X_train = df_train[selected_features]
+                    model_clone = clone(model)
+                    model_clone.fit(X_train, y_train)
 
-            df_new = deepcopy(df_test)
-            df_new[cols] = scaler.transform(df_new[cols])
-            if fillna:
-                X_new = df_new[selected_features].fillna(0)
-            else:
-                X_new = df_new[selected_features]
-            y_new = df_new[target]
-            predictions = model_clone.predict(X_new)
-            score, _ = spearmanr(predictions, y_new)
-            test_scores.at[len(selected_features), name] = score
-            df_test[f'{source}_rfa_{len(selected_features)}'] = predictions
+                    df_new = deepcopy(df_test)
+                    df_new[cols] = scaler.transform(df_new[cols])
+                    if fillna:
+                        X_new = df_new[selected_features].fillna(0)
+                    else:
+                        X_new = df_new[selected_features]
+                    y_new = df_new[target]
+                    predictions = model_clone.predict(X_new)
+                    score, _ = spearmanr(predictions, y_new)
+                    test_scores.at[len(selected_features), (name, rep)] = score
+                    df_test[f'{source}_rfa_{len(selected_features)}'] = predictions
+        else:
+            for name_, df_test in dfs_test.items():
+                name = name_[0].upper() + name_[1:]
+                X_train = df_train[selected_features]
+                model_clone = clone(model)
+                model_clone.fit(X_train, y_train)
+
+                df_new = deepcopy(df_test)
+                df_new[cols] = scaler.transform(df_new[cols])
+                if fillna:
+                    X_new = df_new[selected_features].fillna(0)
+                else:
+                    X_new = df_new[selected_features]
+                y_new = df_new[target]
+                predictions = model_clone.predict(X_new)
+                score, _ = spearmanr(predictions, y_new)
+                test_scores.at[len(selected_features), name] = score
+                df_test[f'{source}_rfa_{len(selected_features)}'] = predictions
     
+    # Figure C section (weights used for training dataset)
+    weights_df_out = weights_df.copy(deep=True)
+    weights_df_out.columns = [remap_names_2.get(c, c) for c in weights_df_out.columns]
+    weights_df_out.to_csv(saveloc_upper, encoding='utf-8-sig')
     weights_df = weights_df.loc[weights_df.index <= max_feats].dropna(how='all', axis=1)
 
     weights_df_melted = weights_df.reset_index().melt(id_vars='index')
@@ -3461,24 +3592,28 @@ def custom_recursive_feature_addition(df_train, dfs_test, cols, target, model, l
     # Create color mapping
     color_mapping = get_color_mapping(wdf, 'variable')
 
-    fig, axes = plt.subplots(2,1, figsize=(12, 16), sharex=True, dpi=300)
-    ax1 = axes[0]
-    ax2 = axes[1]
+    #fig, axes = plt.subplots(2,1, figsize=(12, 16), sharex=True, dpi=300)
+    #ax1 = axes[0]
+    #ax2 = axes[1]
 
-    test_scores_ = test_scores.reset_index(drop=True)
-    for i, name in enumerate(test_scores.columns):
-        if i < 4:
-            sns.lineplot(data=test_scores_[name], ax=ax2, color=['grey', 'purple', 'red', 'green'][i], label=f'{name} Ensemble')
-    ax2.legend()
+    # Set up figure with a gridspec to handle layout
+    fig = plt.figure(figsize=(12, 16), dpi=300)
+    gs = gridspec.GridSpec(2, 3, height_ratios=[5, 5], width_ratios=[1, 5, 1], hspace=0.0, wspace=0.0)
 
-    # Plot the horizontal lines for the 'lines' column
-    for i, (name, score) in enumerate(lines_scores.items()):
-        if i < 4:
-            ax2.axhline(score, color=['grey', 'purple', 'red', 'green'][i], linestyle='--', label=f'{name} Benchmark')
+    ax_c = fig.add_subplot(gs[0, 1])
+
     # Create the barplot with specified order
-    ax = sns.barplot(data=wdf, ax=ax1, hue='variable', x='index', y='value', hue_order=hue_order)
+    ax = sns.barplot(data=wdf, hue='variable', x='index', y='value', hue_order=hue_order, ax=ax_c)
+    
+    #ax_c.set_title('Regression Weights on Whole Dataset', fontsize=20)
+    ax_c.set_xticks([])
+    ax_c.set_xticklabels([])
+    ax_c.set_xlabel('')
+    ax_c.set_ylabel('Regression Weights', fontsize=18, labelpad=10)
+    ax_c.set_yticks(ax_c.get_yticks()[1:])
+    ax_c.set_title(f'RFA on {source.split("_")[0]}', pad=10, fontsize=24)
+    
     # Get the x-ticks positions
-
     num_hues = len(hue_order)
     num_x_categories = len(wdf['index'].unique())
     bar_width = ax.patches[0].get_width()
@@ -3490,35 +3625,139 @@ def custom_recursive_feature_addition(df_train, dfs_test, cols, target, model, l
         patch.set_facecolor(color_mapping[hue_value])
 
     # Remove the original legend
-    ax.legend_.remove()
-
-    xticks = ax.get_xticks()
-
-    # For each x-tick, draw a vertical line at the halfway point to the next x-tick
-    for i in range(len(xticks) - 1):
-        mid_point = (xticks[i] + xticks[i+1]) / 2
-        ax.axvline(x=mid_point, color='gray', linestyle='--', lw=1)
+    #ax.legend_.remove()
 
     # Create a new legend
     #print([remap_names_2[var] for var in wdf['variable'].unique()])
-    legend_patches = [mpatches.Patch(color=color_mapping[var], label=remap_names_2[var]) for var in wdf['variable'].unique()]
-    ax1.legend(handles=legend_patches, title='Variable', loc='upper left', bbox_to_anchor=(1, 1))
-
-    ax1.set_ylabel('Regression Weights', fontsize=20)
-    ax2.set_ylabel('Test Spearman\'s Rho', fontsize=20)
+    legend_patches = [mpatches.Patch(color=color_mapping[var], label=remap_names_2.get(var, var)) for var in wdf['variable'].unique()]
     
-    ax1.set_xlabel('')
-    ax2.set_xlabel('Number of Features', fontsize=20)
+    ax_c.legend(handles=legend_patches, title='', fontsize=16, loc='lower left' if bs else 'upper right') #bbox_to_anchor=(0., 0.4), #loc='lower left',
+    ax_c.set_xlim(-0.5, max_feats - 0.5)
+    #ax_c.set_xlabel('Number of Features', fontsize=20)
 
+    # Define colors for the line plots
+    colors = ['black', 'purple', 'red', 'green']
+
+    test_scores.index.name = 'n_features'
+    test_scores.dropna(how='all', axis=1).T.to_csv(saveloc_lower)
+
+    # Figure D section (lines for performance vs features)
+    if bs:
+        test_scores_ = test_scores.reset_index(drop=True)
+        test_scores_ = test_scores_.apply(pd.to_numeric, errors='coerce')
+        lines_scores = lines_scores.apply(pd.to_numeric, errors='coerce')
+
+        # Calculate the median and interquartile range (IQR) across the 'Suffix' level for each 'dataset'
+        median_scores = test_scores_.groupby(axis=1, level='dataset').median()
+        first_quartile_scores = test_scores_.groupby(axis=1, level='dataset').quantile(0.25)
+        third_quartile_scores = test_scores_.groupby(axis=1, level='dataset').quantile(0.75)
+
+        median_benchmarks = lines_scores.groupby(axis=0, level='dataset').median()
+        first_quartile_benchmarks = lines_scores.groupby(axis=0, level='dataset').quantile(0.25)
+        third_quartile_benchmarks = lines_scores.groupby(axis=0, level='dataset').quantile(0.75)
+
+        ax_marg_l = fig.add_subplot(gs[1, 0])
+        ax_main = fig.add_subplot(gs[1, 1])
+        ax_marg_r = fig.add_subplot(gs[1, 2])
+
+        for i, (dataset_name, dataset_data) in enumerate(median_scores.iteritems()):
+            if i < 4:  # Limit to first 4 datasets if necessary
+                # Plot the median line
+                sns.lineplot(x=median_scores.index + 1, y=dataset_data, ax=ax_main,
+                            color=colors[i], label=f'{dataset_name} Median', marker='o')
+                
+                # Add fill between with very light fill
+                ax_main.fill_between(median_scores.index + 1, 
+                                    first_quartile_scores[dataset_name], 
+                                    third_quartile_scores[dataset_name], color=colors[i], alpha=0.1)
+                
+                # Add lines at the edges of the fill_between area for first and third quartiles
+                ax_main.plot(median_scores.index + 1, first_quartile_scores[dataset_name], color=colors[i], alpha=0.1)
+                ax_main.plot(median_scores.index + 1, third_quartile_scores[dataset_name], color=colors[i], alpha=0.1)
+                
+                # Add a horizontal line for the median benchmark
+                ax_main.axhline(median_benchmarks.at[dataset_name, lines], color=colors[i], linestyle='--')
+
+                # Extract values for current dataset from lines_scores and plot KDE
+                benchmark_values = lines_scores.xs(dataset_name, level='dataset')
+                sns.kdeplot(benchmark_values.iloc[:, 0], ax=ax_marg_l, vertical=True, color=colors[i], label=f'{dataset_name} Distribution')
+
+                # Extract values for current dataset from lines_scores and plot KDE
+                final_values = test_scores.T.xs(dataset_name, level='dataset').T
+                sns.kdeplot(final_values.iloc[max_feats, :], ax=ax_marg_r, vertical=True, color=colors[i], label=f'{dataset_name} Distribution')
+
+        # Clean up Gaussian plot area
+        ax_marg_r.set_xticks([])
+        ax_marg_r.set_yticks([])
+        ax_marg_r.set_xlabel(f'{max_feats}-Feat Ens', labelpad=30, fontsize=18)
+        ax_marg_r.set_ylabel('')
+        #ax_marg_r.spines['top'].set_visible(False)
+        #ax_marg_r.spines['right'].set_visible(False)
+        #ax_marg_r.spines['left'].set_visible(False)
+        #ax_marg_r.spines['bottom'].set_visible(False)
+
+        ax_marg_l.set_xticks([])
+        #ax_marg_l.set_yticks([])
+        ax_marg_l.set_xlabel('CartDDG' if lines=='cartesian_ddg_dir' else 'UNK', labelpad=30, fontsize=18)
+        ax_marg_l.set_ylabel('')
+        #ax_marg_l.spines['top'].set_visible(False)
+        #ax_marg_l.spines['right'].set_visible(False)
+        #ax_marg_l.spines['left'].set_visible(False)
+        #ax_marg_l.spines['bottom'].set_visible(False)
+        ax_marg_l.invert_xaxis()
+        ax_marg_l.set_ylabel('Test Spearman\'s ρ', fontsize=18, labelpad=10)
+
+        ax_main.set_xlabel('Number of Features', fontsize=18)
+        ax_main.set_ylabel('')
+        ax_main.set_yticks([])
+        #ax_main.set_ylabel('Test Spearman\'s Rho', labelpad=60, fontsize=15)
+        #ax_main.set_title('Bootstrapped Test Set Spearman\'s Rho', fontsize=20)
+        ax_main.set_xlim(0.5, max_feats + 0.5)
+
+        ax_main.set_ylim((0.3,0.9))
+        ax_marg_r.set_ylim(ax_main.get_ylim())
+        ax_marg_l.set_ylim(ax_main.get_ylim())
+
+        ax_main.legend(fontsize=16, loc='upper left')
+        ax_main.set_xticks(range(1, max_feats+1))
+        ax_main.set_xticklabels(range(1, max_feats+1))
+            
+    else:
+        ax_main = fig.add_subplot(gs[1, 1])
+        test_scores_ = test_scores.reset_index(drop=True)
+        for i, name in enumerate(test_scores.columns):
+            if i < 4:
+                sns.lineplot(data=test_scores_[name], ax=ax_main, color=colors[i], label=f'{name} Ensemble')
+        ax_main.set_xlim(-0.5, max_feats-0.5)
+        current_ticks = ax_main.get_xticks()  # Get current x-tick locations
+        new_tick_positions = [int(tick + 1) for tick in current_ticks if tick + 1 <= max_feats]  # Shift ticks by 1, within bounds
+        ax_main.set_xticklabels(new_tick_positions)  # Set new tick positions
+
+        # Plot the horizontal lines for the 'lines' column
+        for i, name in enumerate(lines_scores.index):
+            if i < 4:
+                ax_main.axhline(lines_scores.at[name, lines], color=colors[i], linestyle='--', label=f'{name} Benchmark')
+            
+        ax_main.legend(fontsize=12)
+        ax_main.set_ylabel('Test Spearman\'s ρ')
+
+    #ax_c.set_xlim(-0.5, max_feats - 0.5) 
     #ax1.legend(loc='upper left', bbox_to_anchor=(1, 1))
-    ax2.legend(loc='upper left', bbox_to_anchor=(1, 1))
+
+    xticks = ax_main.get_xticks()
+
+    # For each x-tick, draw a vertical line at the halfway point to the next x-tick
+    for i in range(len(xticks) - 1):
+        mid_point = (xticks[i] + xticks[i+1]) / 2 - 1
+        ax_c.axvline(x=mid_point, color='gray', linestyle='--', lw=0.5, alpha=0.5)
+        ax_main.axvline(x=mid_point + 1, color='gray', linestyle='--', lw=0.5, alpha=0.5)
 
     plt.tight_layout()
-    plt.suptitle('Recursive Feature Addition', fontsize=20)
+    #plt.suptitle('Recursive Feature Addition', fontsize=20)
     plt.subplots_adjust(top=0.95)
     plt.show()
 
-    return test_scores, weights_df, dfs_test
+    return test_scores, weights_df, dfs_test, fig
 
 
 def compare_distributions_boxes(dfs, shared_columns=None, sources=None, kind='strip'):
@@ -3572,7 +3811,7 @@ def compare_distributions_boxes(dfs, shared_columns=None, sources=None, kind='st
     melted_df = scaled_data.melt(id_vars='Source', value_vars=shared_columns)
 
     # Plot a distribution plot for each shared column
-    plt.figure(figsize=(12, 6))
+    fig = plt.figure(figsize=(12, 6))
     if kind == 'strip':
         ax = sns.stripplot(x='variable', y='value', hue='Source', data=melted_df, dodge=True, alpha=0.05, jitter=0.3, palette=sns.color_palette('tab10'))
     elif kind == 'boxen':
@@ -3581,7 +3820,7 @@ def compare_distributions_boxes(dfs, shared_columns=None, sources=None, kind='st
         ax = sns.violinplot(x='variable', y='value', hue='Source', data=melted_df, split=True, bw=0.1, inner='quart')
 
     # Enhance annotations and place legend outside
-    plt.title('Feature Distributions Comparison')
+    #plt.title('Feature Distributions Comparison')
     plt.xlabel('Feature')
     plt.ylabel('Normalized Value')
     plt.xticks(rotation=45, ha='right')  # Rotate x-axis labels for readability
@@ -3617,6 +3856,8 @@ def compare_distributions_boxes(dfs, shared_columns=None, sources=None, kind='st
     ax.set_xticklabels(remapped_x)
     plt.show()
 
+    return fig
+
 
 def plot_joint_histogram(df1, df2, column, name1='K2369', name2='Q3421'):
     """
@@ -3647,7 +3888,7 @@ def plot_joint_histogram(df1, df2, column, name1='K2369', name2='Q3421'):
     combined_counts = pd.concat([counts_df1, counts_df2], ignore_index=True)
     
     # Plotting using seaborn
-    plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 6))
     sns.barplot(data=combined_counts, x='count', y='Amino Acid', hue='dataset', ci=None)
 
     plt.xlabel('Count')
@@ -3656,12 +3897,14 @@ def plot_joint_histogram(df1, df2, column, name1='K2369', name2='Q3421'):
     plt.legend(title='Dataset')
 
     plt.show()
+    return fig
 
 
 def bootstrap_table(df, 
                     plot_cols, plot_models, plot_title, ylim, right_y_lim,
                     table_cols, var_cols, sort_col, sort_order='descending',
-                    saveloc='../data/extended/data_bootstrapped_formatted.csv'):
+                    saveloc_full='../data/extended/figure_data/data_bootstrapped_formatted.csv',
+                    saveloc_formatted='../data/extended/data_bootstrapped_formatted.csv'):
 
     new_remap_cols = {}
     for key, value in remap_cols.items():
@@ -3691,10 +3934,11 @@ def bootstrap_table(df,
     tmp2.columns = [new_remap_cols[c] for c in tmp2.columns]
     tmp2 = tmp2.reset_index().drop_duplicates()
 
-    make_scatter_chart(tmp2, models=plot_models, title=plot_title, ylim=ylim, figsize=(7, 4), 
+    fig = make_scatter_chart(tmp2, models=plot_models, title=plot_title, ylim=ylim, figsize=(7, 4), 
         use_dual_y_axis=True, right_y_lim=right_y_lim, sw=len(plot_cols)/3, scale_y2=(plot_cols[-1] == 'net_stabilization'))
 
     s5_full = s5.copy(deep=True)
+    s5_full.to_csv(saveloc_full, encoding='utf-8-sig')
     #print(s5_full)
 
     # Iterate over the DataFrame and update the mean columns
@@ -3717,5 +3961,5 @@ def bootstrap_table(df,
     #s5_full.columns = [col[:-5] for col in s5_full.columns]
 
     s6 = s5.reset_index().rename({'model_type': 'Model Type', 'model': 'Model'}, axis=1).set_index(['Model Type', 'Model'])
-    s6.to_csv(saveloc, encoding='utf-8-sig')
-    return s6
+    s6.to_csv(saveloc_formatted, encoding='utf-8-sig')
+    return s6, fig
