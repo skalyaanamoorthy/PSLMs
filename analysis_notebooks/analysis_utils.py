@@ -219,7 +219,7 @@ def get_color_mapping(data, column='variable'):
     palettes = {}
     color_mapping = {}
     for var in data[column].unique():
-        print(var)
+        #print(var)
         base_color = determine_base_color(var)
         if base_color in palettes.keys():
             palette = palettes[base_color]
@@ -1171,7 +1171,7 @@ def correlations(db_gt_preds, dbr, score_name, score_name_2=None, min_obs=5, bin
 
 
 def correlations_2(db_complete, score_name, score_name_2=None, min_obs=5, bins=20, corr='spearman', out=True, plot=False, direction='dir', highlight=[], annotate=True, color_col=None, scale=1, th=0.0):
-    print(score_name)
+    #print(score_name)
     dbf = db_complete.copy(deep=True)
 
     if score_name_2==None:
@@ -1223,7 +1223,7 @@ def correlations_2(db_complete, score_name, score_name_2=None, min_obs=5, bins=2
     if color_col is not None:
         to_join = dbf[['code', color_col]]
         i = i.reset_index().set_index('code').join(to_join.set_index('code')).reset_index().set_index(['code', 'n_muts']).drop_duplicates()
-        print(i)
+        #print(i)
 
     ungrouped = g.corr(corr)[[ddg]]#.drop(ddg)
     ungrouped['n_total'] = len(g)
@@ -2021,7 +2021,7 @@ def model_combinations_heatmap(df, dfm, db_measurements, statistic, measurement,
     
     pdf = pdf.join(db_measurements[measurement]).dropna(subset=measurement).dropna(how='any')
 
-    print(len(pdf))
+    #print(len(pdf))
     if n_bootstraps > 0:
         pvals, performances, std_values, stat_df = calculate_p_values(
             pdf, ground_truth_col=measurement, statistic=statistic, n_bootstraps=n_bootstraps, grouper=grouper, noise=noise)
@@ -2060,7 +2060,7 @@ def model_combinations_heatmap(df, dfm, db_measurements, statistic, measurement,
         vmin2 = np.nanmin(pivot_table_2, axis=(0,1))
         vmax2 = np.nanmax(pivot_table_2, axis=(0,1))
         v = max(np.abs(vmax2), np.abs(vmin2))
-        print(v)
+        #print(v)
 
     sns.heatmap(performances, annot=combined_annotations if annot else None, cmap='viridis', cbar=False, fmt='', vmin=threshold, #fmt='.2e' if threshold is not None else '.3f',
         mask=np.triu(np.ones(log_pvals.shape, dtype=bool), k=1), ax=ax, annot_kws={"size": 13})
@@ -2088,7 +2088,7 @@ def model_combinations_heatmap(df, dfm, db_measurements, statistic, measurement,
     for tick_label in ax.get_yticklabels():
         tick_label.set_color(determine_base_color(tick_label))
     remapped_x = [remap_names_2[tick.get_text()] if tick.get_text() in remap_names_2.keys() else tick.get_text() for tick in ax.get_xticklabels()]
-    print(remapped_x)
+    #print(remapped_x)
     remapped_x = [n[:-4] if n.endswith('_dir') or n.endswith('_inv') else n for n in remapped_x]
 
     ax.set_xticklabels(remapped_x)
@@ -2515,8 +2515,8 @@ def compare_performance(dbc,
     elif count_muts:
         full = full.rename({f'n_muts_{statistic}': f'n_muts_{statistic}_0'}, axis=1)
         full['n'] = full[[f'n_muts_{statistic}_{i}' for i in range(n_bootstraps)]].mean(axis=1).astype(int)
-        print(full['n'].mean())
-        print(full[[f'n_{i}' for i in range(n_bootstraps)]].mean(axis=1).astype(int).mean())
+        #print(full['n'].mean())
+        #print(full[[f'n_{i}' for i in range(n_bootstraps)]].mean(axis=1).astype(int).mean())
     else:
         full['n'] = full[[f'n_{i}' for i in range(n_bootstraps)]].mean(axis=1).astype(int)
     full[f'{statistic_2}_std'] = full[[f'{statistic_2}_{i}' for i in range(n_bootstraps)]].std(axis=1)
@@ -2564,7 +2564,7 @@ def compare_performance(dbc,
         dbc[f'{split_col} <= {threshold_2}'] = dbc[split_col] <= threshold_2
         vvs = [f'{split_col} <= {threshold_2}', f'{threshold_1} >= {split_col} > {threshold_2}', f'{split_col} > {threshold_1}',]
 
-    print(vvs)
+    #print(vvs)
     dbc = dbc.dropna(subset=measurement)
     dbc = dbc.melt(id_vars=dbc.columns.drop(vvs), value_vars=vvs, value_name='value_')
     dbc = dbc.loc[dbc['value_']].rename({'variable':'split'}, axis=1)
@@ -2634,9 +2634,9 @@ def compare_performance(dbc,
         if plots in ['both', 'bottom']:
             cat = new_label.split(':')[0]
             num = new_label.split(':')[-1]
-            print(new_label)
+            #print(new_label)
             new_label = new_label.replace(num, f' {full_quants.loc[cat].item()}')
-            print(new_label)
+            #print(new_label)
             legend_element_2.set_label(new_label)
 
         if 'conservation' in original_label:
@@ -2689,7 +2689,7 @@ def compare_performance(dbc,
 
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
 
-    print(splits.groupby('class')['n'].mean().astype(int))
+    #print(splits.groupby('class')['n'].mean().astype(int))
     plt.show()
     return splits, ungrouped0['model'], fig
 
@@ -3484,7 +3484,7 @@ def custom_recursive_feature_addition(df_train, dfs_test, cols, target, model, l
 
     if bs:
          for name_, df_test_list in dfs_test.items():
-            print(name_)
+            #print(name_)
             for rep in range(bs):
                 df_test = df_test_list[rep]
                 name = name_[0].upper() + name_[1:]
@@ -3805,7 +3805,7 @@ def compare_distributions_boxes(dfs, shared_columns=None, sources=None, kind='st
     scaled_data = pd.DataFrame(scaler.fit_transform(combined_df[shared_columns]), columns=shared_columns)
     scaled_data['Source'] = combined_df['Source'].values
     scaled_zero = scaler.transform([[0]*len(shared_columns)])[0]
-    print(scaled_zero)
+    #print(scaled_zero)
 
     # Melt the scaled dataframe to long format for plotting
     melted_df = scaled_data.melt(id_vars='Source', value_vars=shared_columns)
