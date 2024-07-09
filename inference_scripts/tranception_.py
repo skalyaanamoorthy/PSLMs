@@ -115,7 +115,7 @@ def score_sequence(args):
             new = new.set_index('uid2').astype(float)
             new[f'runtime_tranception_{"weights_" if args.use_weights else ""}dir'] = time.time() - start
             trance = pd.concat([trance, new])
-            trance.to_csv('tranception_results.csv')
+            #trance.to_csv('tranception_results.csv')
             pbar.update(1)
         
     logps = trance

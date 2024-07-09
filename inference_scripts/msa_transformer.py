@@ -211,8 +211,7 @@ def main():
     )
     parser.add_argument(
             '--output', '-o', type=str,
-            help='location of the database used to store predictions.\
-                  Should be a copy of the mapped database with additional cols'
+            help='location of the database used to store predictions. Should be a copy of the mapped database with additional cols'
     )
     parser.add_argument(
             '--do_subsampling', action='store_true',
