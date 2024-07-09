@@ -49,7 +49,7 @@ The expected installation time for basic functionality is >10 minutes, assuming 
 The sections after general setup are for reproducing the experiments starting from raw data.
 
 ### Docker Setup 
-ℹ️ **This section is the easiest option for running inference and completely reproducing the analyses. Creating the image may take upwards of an hour.**
+ℹ️ **This section is the easiest option for running inference and completely reproducing the analyses. Creating the image may take upwards of one hour.**
 
 ⚠️⏬ **If you are only interested in demoing notebooks, skip to the General Setup section.**
 
@@ -218,7 +218,7 @@ unzip ./data/preprocessed/weights.zip -d ./data/preprocessed/weights
 
 🚩 **Skip to here if using Docker**
 
-*If using Docker: make sure your virtual environment is activated `source /opt/venv/bin/activate` and you are in the correct directory `cd /app`*
+*If using Docker: make sure your virtual environment is activated `source /app/venv/bin/activate` and you are in the correct directory `cd /app`*
 
 3. To run inference you will need to preprocess the mutants in each database, obtaining their structures and sequences and modelling missing residues. You can accomplish this with preprocess.py.  Assuming you are in the base level of the repo, you can call the following:
 
