@@ -16,9 +16,12 @@ source ../pslm/bin/activate
 
 if ! test -e '../data/inference/s669_mapped_preds.csv'; then cp '../data/preprocessed/s669_mapped.csv' '../data/inference/s669_mapped_preds.csv'; fi
 python ../inference_scripts/tranception_.py --checkpoint ~/software/Tranception_Large --num_workers 1 --db_loc '../data/preprocessed/s669_mapped.csv' --output '../data/inference/s669_mapped_preds.csv' --tranception_loc ~/software/Tranception
-if ! test -e '../data/inference/fireprot_mapped_preds.csv'; then cp '../data/preprocessed/fireprot_mapped.csv' '../data/inference/fireprot_mapped_preds.csv'; fi
-python ../inference_scripts/tranception_.py --checkpoint ~/software/Tranception_Large --num_workers 1 --db_loc '../data/preprocessed/fireprot_mapped.csv' --output '../data/inference/fireprot_mapped_preds.csv' --tranception_loc ~/software/Tranception
 if ! test -e '../data/inference/ssym_mapped_preds.csv'; then cp '../data/preprocessed/ssym_mapped.csv' '../data/inference/ssym_mapped_preds.csv'; fi
 python ../inference_scripts/tranception_.py --checkpoint ~/scratch/software/Tranception_Large --num_workers 1 --db_loc '../data/preprocessed/ssym_mapped.csv' --output '../data/inference/ssym_mapped_preds.csv' --tranception_loc ~/scratch/software/Tranception
 if ! test -e '../data/inference/q3421_mapped_preds.csv'; then cp '../data/preprocessed/q3421_mapped.csv' '../data/inference/q3421_mapped_preds.csv'; fi
 python ../inference_scripts/tranception_.py --checkpoint ~/scratch/software/Tranception_Large --num_workers 1 --db_loc '../data/preprocessed/q3421_mapped.csv' --output '../data/inference/q3421_mapped_preds.csv' --tranception_loc ~/scratch/software/Tranception
+if ! test -e '../data/inference/k3822_mapped_preds.csv'; then cp '../data/preprocessed/k3822_mapped.csv' '../data/inference/k3822_mapped_preds.csv'; fi
+python ../inference_scripts/tranception_.py --checkpoint ~/scratch/software/Tranception_Large --num_workers 1 --db_loc '../data/preprocessed/k3822_mapped.csv' --output '../data/inference/k3822_mapped_preds.csv' --tranception_loc ~/scratch/software/Tranception
+
+#if ! test -e '../data/inference/fireprot_mapped_preds.csv'; then cp '../data/preprocessed/fireprot_mapped.csv' '../data/inference/fireprot_mapped_preds.csv'; fi
+#python ../inference_scripts/tranception_.py --checkpoint ~/software/Tranception_Large --num_workers 1 --db_loc '../data/preprocessed/fireprot_mapped.csv' --output '../data/inference/fireprot_mapped_preds.csv' --tranception_loc ~/software/Tranception
