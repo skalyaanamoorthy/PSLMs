@@ -37,8 +37,6 @@ COPY . /app
 # otherwise:
 #RUN git clone https://github.com/skalyaanamoorthy/PSLMs.git
 
-#WORKDIR /app/PSLMs
-
 # to get large files / datasets
 RUN git lfs install --skip-smudge && \
     git lfs pull && \
@@ -47,10 +45,10 @@ RUN git lfs install --skip-smudge && \
     unzip ./data/rosetta_predictions.zip -d ./data/rosetta_predictions
 
 # Create a virtual environment
-RUN python3 -m venv /opt/venv
+RUN python3 -m venv /app/pslm
 
 # Activate the virtual environment and install dependencies
-RUN . /opt/venv/bin/activate && \
+RUN . /app/pslm/bin/activate && \
     pip install -r requirements.txt && \
     pip install evcouplings --no-deps && \
     pip install torch && \
@@ -88,10 +86,13 @@ RUN chmod +x convenience_scripts/append_modeller_paths.sh && \
 
 RUN chmod -R 777 /app
 
-#RUN #. /opt/venv/bin/activate && \
-#    python preprocessing/preprocess.py --dataset q3421
+# Create the entrypoint script
+RUN echo '#!/bin/bash\nsource /app/pslm/bin/activate\nexec "$@"' > /usr/local/bin/entrypoint.sh
 
-#RUN data/preprocessed/q3421_mapped.csv data/inference/q3421_mapped_preds_copy.csv && \
-#    python ./inference_scripts/mif.py  --db_loc './data/preprocessed/q3421_mapped.csv' --output './data/inference/q3421_mapped_preds_copy.csv'
+# Make the entrypoint script executable
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Set the script as the default entry point
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 CMD /bin/bash

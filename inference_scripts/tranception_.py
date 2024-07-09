@@ -170,15 +170,13 @@ if __name__ == '__main__':
     )
     parser.add_argument(
             '--low_mem', action='store_true', 
-            help='Skip certain proteins which have large MSAs and require more \
-                than 64GB RAM'
+            help='Skip certain proteins which have large MSAs and require more than 64GB RAM'
     )
 
     args = parser.parse_args()
 
     if not os.path.exists(args.tranception_loc):
-        print('Invalid Tranception directory! Please download the GitHub repo \
-            and ensure the full path to the repository is provided')
+        print('Invalid Tranception directory! Please download the GitHub repo and ensure the full path to the repository is provided')
 
     sys.path.append(args.tranception_loc)
     from transformers import PreTrainedTokenizerFast

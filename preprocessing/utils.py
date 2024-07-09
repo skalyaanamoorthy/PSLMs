@@ -78,7 +78,7 @@ def get_uniprot(code, chain, SEQUENCES_DIR, uniprot_id=None):
 
     if uniprot_id is None:
         # uniprot entries corresponding to multichain PDBs may need to be specified   
-        if code in ['1ACB', '1AON', '1GUA', '1GLU', '1OTR', '2CLR', '3MON']:
+        if code in ['1ACB', '1A0N', '1AON', '1GUA', '1GLU', '1OTR', '2CLR', '3MON']:
             entity = 2
         elif code in ['1HCQ', '1NFI', '1TUP', '3DV0']:
             entity = 3
@@ -417,6 +417,14 @@ def align_sequence_structure(code, chain, pdb_ungapped, dataset, mapping_df,
         pdb_gapped = ['-']*433 + list(pdb_ungapped)
         pdb_gapped = ''.join(pdb_gapped)
         uniprot_gapped = uniprot_seq
+    elif code == '1TUD':
+        pdb_gapped = ['-']*950 + list(pdb_ungapped)
+        pdb_gapped = ''.join(pdb_gapped)
+        uniprot_gapped = uniprot_seq
+    elif code == '2M2L':
+        pdb_gapped = ['-']*443 + list(pdb_ungapped)
+        pdb_gapped = ''.join(pdb_gapped)
+        uniprot_gapped = uniprot_seq        
     #elif code == '1TIT':
     #    pdb_gapped = ['-']*12676 + list(pdb_ungapped)
     #    pdb_gapped = ''.join(pdb_gapped)
@@ -490,6 +498,7 @@ def align_sequence_structure(code, chain, pdb_ungapped, dataset, mapping_df,
     # sequence: the first 1023 residues which also fully cover the structure, 
     # extending past the N- and then C- terminus if there is space
 
+    print(alignment_df)
     # assume mutants are always within the structure range
     if dataset != 'fireprot':
         window_start = alignment_df.set_index(
@@ -685,3 +694,119 @@ def save_formatted_data(code, chain, group, dataset, output_root):
                 # write to MSA-Transformer file
                 new_pos = pos - ou - ws
                 msa.write(f',{wt}{new_pos}{mut}\n')
+
+
+def save_formatted_data(code, chain, group, dataset, output_root, 
+        doubles=False):
+    """
+    Save information about the mutants in the formats expected for each method.
+    """
+
+    # open the Tranception file
+    with open(os.path.join(
+        output_root, 'DMS_Tranception', f'{code}_{chain}_{dataset}.csv'
+        ), 'w') as trance:
+        trance.write('mutated_sequence,mutant\n')
+
+        # Open the MSA-Transformer file (also used by ESM-1V)
+        with open(os.path.join(
+            output_root, 'DMS_MSA', f'{code}_{chain}_{dataset}.csv'),
+             'w') as msa:
+            msa.write(',mutation\n')
+
+            if not doubles:
+                # iterate through the mutations, writing each one after validation
+                for (wt, pos, mut, ou, seq, ws), _ in group.groupby(
+                    ['wild_type', 'position', 'mutation', 
+                    'offset_up', 'uniprot_seq', 'window_start']):
+
+                    uniprot_seq = list(seq)
+                    try:
+                        assert uniprot_seq[
+                            pos - 1 + ou*(-1 if dataset!='fireprot' else 0)]== wt,\
+                            ('Wrote a mutation whose wt disagrees with uniprot_seq')
+                    except Exception as e:
+                        print(e, code, wt, pos, mut)
+
+                    # generation of the mutant sequence
+                    uniprot_seq[pos-1+ou*(-1 if dataset!='fireprot' else 0)] = mut
+                    mutated_uniprot_seq = ''.join(uniprot_seq)
+
+                    # write to the Tranception file
+                    trance.write(f'{mutated_uniprot_seq},{wt}'
+                                +f'{pos + ou * (-1 if dataset!="fireprot" else 0)}'
+                                +f'{mut}\n')
+                    
+                    # edge case where structure is too large (happens once)
+                    if (pos + ou * (-1 if dataset!='fireprot' else 0) - ws > 1022):
+                        print('mutation occurs outside required window:', 
+                                code, wt, pos, mut)
+                    else:
+                        new_pos = pos + ou * (-1 if dataset!='fireprot' else 0) - ws
+                        msa.write(f',{wt}{new_pos}{mut}\n')
+            else:
+                for (wt1, pos1, mut1, wt2, pos2, mut2, ou, seq, ws), _ in group.groupby(
+                    ['wild_type_1', 'position_1', 'mutation_1', 
+                    'wild_type_2', 'position_2', 'mutation_2', 
+                    'offset_up', 'uniprot_seq', 'window_start']):
+
+                    uniprot_seq = list(seq)
+                    try:
+                        assert uniprot_seq[
+                            pos1 - 1 + ou*(-1 if dataset!='fireprot' else 0)]== wt1,\
+                            ('Wrote a mutation whose wt disagrees with uniprot_seq')
+                        assert uniprot_seq[
+                            pos2 - 1 + ou*(-1 if dataset!='fireprot' else 0)]== wt2,\
+                            ('Wrote a mutation whose wt disagrees with uniprot_seq')
+                    except Exception as e:
+                        print(e, code, wt1, pos1, mut1, wt2, pos2, mut2)
+
+                    # generation of the mutant sequence
+                    uniprot_seq[pos1-1+ou*(-1 if dataset!='fireprot' else 0)] = mut1
+                    uniprot_seq[pos2-1+ou*(-1 if dataset!='fireprot' else 0)] = mut2
+                    mutated_uniprot_seq = ''.join(uniprot_seq)
+
+                    # write to the Tranception file
+                    trance.write(f'{mutated_uniprot_seq},'
+                                +f'{wt1}{pos1 + ou * (-1 if dataset!="fireprot" else 0)}{mut1}:'
+                                +f'{wt2}{pos2 + ou * (-1 if dataset!="fireprot" else 0)}{mut2}\n')
+                    
+                    # edge case where structure is too large (happens once)
+                    if (pos1 + ou * (-1 if dataset!='fireprot' else 0) - ws > 1022):
+                        print('mutation occurs outside required window:', 
+                                code, wt1, pos1, mut1)
+                    elif (pos2 + ou * (-1 if dataset!='fireprot' else 0) - ws > 1022):
+                        print('mutation occurs outside required window:', 
+                                code, wt2, pos2, mut2)
+                    else:
+                        new_pos1 = pos1 + ou * (-1 if dataset!='fireprot' else 0) - ws
+                        new_pos2 = pos2 + ou * (-1 if dataset!='fireprot' else 0) - ws
+                        msa.write(f',{wt1}{new_pos1}{mut2}:{wt2}{new_pos2}{mut1}\n')
+
+
+def infer_offset(group2, pdb_ungapped):
+    assert 'aa_seq' in group2.columns
+    #pdb_ungapped = ''.join([d[res[1]] for res in pdb_seq])
+    aln = pairwise2.align.globalms(
+        group2['aa_seq'].head(1).item(), pdb_ungapped, 10, 5, -50, -1
+        )[0]
+    db_seq = aln.seqA
+    pdb_seq = aln.seqB
+    #print(db_seq)
+    #print(pdb_seq)
+    mismatch_indices = []
+    for idx, (aa1, aa2) in enumerate(zip(db_seq, pdb_seq)):
+        if aa2 == '-':
+            print('Unexpected insertion in PDB sequence')
+        if aa1 != '-' and aa2 != '-' and aa1 != aa2:
+            mismatch_indices.append(idx)
+
+    #print(mismatch_indices)
+    #print(db_seq)
+    #print(pdb_seq)
+
+    offset = 0
+    offset -= len(db_seq) - len(db_seq.lstrip('-'))
+    offset += len(pdb_seq) - len(pdb_seq.lstrip('-'))
+
+    return offset, db_seq, pdb_seq

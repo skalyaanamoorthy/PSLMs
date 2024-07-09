@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cat <<EOT >> /opt/venv/bin/activate
+cat <<EOT >> ./pslm/bin/activate
 
 if [ -z \$PYTHONPATH ]
 then

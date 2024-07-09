@@ -1685,28 +1685,28 @@ def compute_stats(
                         df_out.loc[(meas,sp,col), 'mean_t1s'] = top_1_stab / len(pred_df_cont[grouper].unique())
 
                     # inverse of the assigned rank of the number one most stable protein per group
-                    #if ('mean_reciprocal_rank' in stats) or (stats == ()): 
-                    #    reciprocal_rank_sum = 0
-                    #    unique_groups = pred_df_cont[grouper].unique()
-                    #    for code, group in pred_df_cont.groupby(grouper):
-                    #        group = group.drop_duplicates()
-                    #        sorted_group = group.sort_values(col, ascending=False)
-                    #        highest_meas_rank = sorted_group[meas].idxmax()
+                    if ('mean_reciprocal_rank' in stats) or (stats == ()): 
+                        reciprocal_rank_sum = 0
+                        unique_groups = pred_df_cont[grouper].unique()
+                        for code, group in pred_df_cont.groupby(grouper):
+                            group = group.drop_duplicates()
+                            sorted_group = group.sort_values(col, ascending=False)
+                            highest_meas_rank = sorted_group[meas].idxmax()
 
-                    #        rank_of_highest_meas = sorted_group.index.get_loc(highest_meas_rank)
-                    #        if type(rank_of_highest_meas) in [slice, list, bool]:
-                    #            print('Something went wrong with MRR for', col, code)
-                    #            continue
-                    #        try:
-                    #            rank_of_highest_meas += 1
-                    #        except:
-                    #            print('Something went wrong with MRR for', col, code)
-                    #            continue
+                            rank_of_highest_meas = sorted_group.index.get_loc(highest_meas_rank)
+                            if type(rank_of_highest_meas) in [slice, list, bool]:
+                                print('Something went wrong with MRR for', col, code)
+                                continue
+                            try:
+                                rank_of_highest_meas += 1
+                            except:
+                                print('Something went wrong with MRR for', col, code)
+                                continue
 
-                    #        reciprocal_rank_sum += 1 / rank_of_highest_meas
+                            reciprocal_rank_sum += 1 / rank_of_highest_meas
 
-                    #    mean_reciprocal_rank = reciprocal_rank_sum / len(unique_groups)
-                    #    df_out.loc[(meas, sp, col), 'mean_reciprocal_rank'] = mean_reciprocal_rank
+                        mean_reciprocal_rank = reciprocal_rank_sum / len(unique_groups)
+                        df_out.loc[(meas, sp, col), 'mean_reciprocal_rank'] = mean_reciprocal_rank
                     
                     # normalized discounted cumulative gain, a measure of information retrieval ability
                     if ('ndcg' in stats) or (stats == ()):

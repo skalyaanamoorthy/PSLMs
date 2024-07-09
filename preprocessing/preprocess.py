@@ -119,6 +119,7 @@ def main(args):
     dataset = args.dataset
     dataset_outname = args.dataset
     sym = False
+    doubles = args.doubles
 
     if 'fireprot' in args.db_loc.lower():
         dataset = 'fireprot'
@@ -177,13 +178,22 @@ def main(args):
               'This is NOT desired behaviour for reproducing benchmarks')
         print(db)
         db['code'] = db['code'].str.upper()
-        for c in ['code', 'chain', 'wild_type', 'position', 'mutation']:
-            assert c in db.columns
+        if not args.doubles:
+            for c in ['code', 'chain', 'wild_type', 'position', 'mutation']:
+                assert c in db.columns
+        else:
+            for c in ['code', 'chain', 'wild_type_1', 'position_1', 'mutation_1',
+                'wild_type_2', 'position_2', 'mutation_2']:
+                assert c in db.columns            
     
     if sym:
         db['uid'] = db['structure'] + "_" + \
             db['position'].astype(str) + db['mutation']
         grouper = ['code', 'structure', 'chain']
+    elif doubles:
+        db['uid'] = db['code']+'_'+db['position_1'].astype(str)+db['mutation_1'] \
+            +db['position_2'].astype(str)+db['mutation_2']
+        grouper = ['code', 'code', 'chain']
     else:
         db['uid'] = db['code']+'_'+db['position'].astype(str)+db['mutation']
         grouper = ['code', 'code', 'chain']
@@ -197,6 +207,9 @@ def main(args):
 
     # iterate through one PDB code at a time, e.g. all sharing the wt structure
     for (code, struct, chain), group in db.groupby(grouper):
+
+        if '2MW' in code:
+            continue
 
         # chains listed in database do not always correspond to the assembly
         if code in wrong_chains and dataset in ['fireprot', 's669']:
@@ -223,10 +236,6 @@ def main(args):
         print(f"Parsing {struct}_{chain},\
             {len(group['uid'].unique())} unique mutations")
             
-        # directory which will be used to organize RESULTS structure-wise
-        #os.makedirs(
-        #    os.path.join(RESULTS_DIR, f'{struct}_{chain}'), exist_ok=True
-        #    )
 
         if not args.use_pdb:
             # get the biological assembly, which includes multivmeric structures
@@ -277,12 +286,20 @@ def main(args):
                     code, chain, SEQUENCES_DIR
                     )
 
+        if doubles:
+            group_min = min(group['position_1'].min(), group['position_2'].min())
+            group_max = max(group['position_1'].max(), group['position_2'].max())
+        else:
+            group_min = group['position'].min()
+            group_max = group['position'].max()
+            inferred_offset = 0
+
         # align the pdb sequence to the uniprot sequence
         alignment_df, window_start, pdb_ungapped, uniprot_seq = \
             utils.align_sequence_structure(
                 code, chain, pdb_ungapped, dataset, mapping_df,
                 SEQUENCES_DIR, WINDOWS_DIR, ALIGNMENTS_DIR, 
-                group['position'].min(), group['position'].max(), args.indexer,
+                group_min, group_max, args.indexer,
                 uniprot_seq)
 
         if not args.use_msa:
@@ -293,7 +310,7 @@ def main(args):
             matching_files = glob.glob(
                 os.path.join(
                     args.alignments, 
-                    f'{code}_{wt_chain}_MSA*_full_cov75_id90.a3m')
+                    f'{code}*_MSA*_full_cov75_id90.a3m')
                 )
 
             extended = False
@@ -308,7 +325,7 @@ def main(args):
                         new_msa_full = os.path.join(
                             internal_path, 
                             args.alignments, 
-                            f'{code}_{wt_chain}_MSA_extended.a3m' 
+                            f'{code}*_MSA_extended.a3m' 
                         )
                         extended_msas.append(code)
                         extended = True
@@ -320,7 +337,7 @@ def main(args):
                         os.path.basename(orig_msa))
                     new_msa_full = os.path.join(
                         internal_path, args.alignments, 
-                        f'{code}_{wt_chain}_MSA.a3m' 
+                        f'{code}*_MSA.a3m' 
                     )                            
             elif len(matching_files) == 0:
                 exp = "un" if code not in ["1DXX", "1JL9", "1TIT"] else ""
@@ -333,7 +350,7 @@ def main(args):
                 new_msa = os.path.join(internal_path, args.alignments, 
                     os.path.basename(orig_msa))
                 new_msa_full = os.path.join(
-                    internal_path, args.alignments, f'{code}_{wt_chain}_MSA.a3m' 
+                    internal_path, args.alignments, f'{code}*_MSA.a3m' 
                 )     
             theta = str(0.01) if origin == 'Viruses' else str(0.2)
             matching_weights = glob.glob(
@@ -385,17 +402,34 @@ def main(args):
 
         if sym:
             grouper2 = ['uid', 'wild_type', 'position', 'mutation']
+        elif doubles:
+            grouper2 = ['wild_type_1', 'position_1', 'mutation_1']
         else:
             grouper2 = ['wild_type', 'position', 'mutation']
         
         flag = False
+
+        offsets = []
+
+        if args.infer_offsets:
+            for name, group2 in group.groupby(grouper2):
+                offset, db_seq, pdb_seq = utils.infer_offset(group2, pdb_ungapped)
+                offsets.append(offset)
+                #print(db_seq)
+                #print(pdb_seq)
+                #print(offsets)
+                inferred_offset = int(np.median(offsets))
+            print(inferred_offset)
+        else:
+            inferred_offset = 0
+
         for name, group2 in group.groupby(grouper2):
             uid = None
             if sym:
                 uid, wt, pos, mut = name
             else:
                 wt, pos, mut = name
-                #pos -= inferred_offset
+                pos -= inferred_offset
 
             # get offsets for interconversion between uniprot and pdb positions
             if code != '2MWA':
@@ -408,7 +442,7 @@ def main(args):
             # such as MSE which are only sometimes unknown
             pu = pdb_ungapped.replace('9', 'X')
             # ESM-IF canonicalizes by default  
-            pu = pu.replace('Z', 'M')       
+            pu = pu.replace('Z', 'M')
 
             # second validation that mutants are correct
             if not np.isnan(offset_up):
@@ -417,8 +451,11 @@ def main(args):
                     print('UniProt mismatch detected.')
                 #if dataset != 'fireprot':
                 #    assert pu[seq_pos -1] == wt
-                if pu[seq_pos -1] != wt:
-                     print('Warning! PDB at mutation does not match wt')
+                try:
+                    if pu[seq_pos -1] != wt:
+                        print('Warning! PDB at mutation does not match wt1')
+                except IndexError:
+                    print(code, seq_pos -1, 'out of range')
 
                 # format the mutant sequence as required by each method
                 pu = utils.generate_mutant_sequences(
@@ -435,38 +472,114 @@ def main(args):
                 #assert mapper['repaired_seq'] == wt
                 pos_pdb = mapper['author_id']
             else:
-                pos_pdb = np.nan
+                pos_pdb = np.nan       
 
-            try:
-                new_hit = pd.DataFrame({0: {
-                    'uid': (code + '_' + str(pos) + mut
-                        if uid is None else uid),
-                    'code':code, 'structure':struct, 'chain':chain, 
-                    'wild_type':wt, 'position_orig':pos, 'position':seq_pos,
-                    'mutation':mut,'pdb_ungapped': pu,
-                    'position_pdb': pos_pdb,
-                    'uniprot_seq': uniprot_seq,
-                    'offset_up':offset_up, 'window_start': window_start, 
-                    'is_nmr':is_nmr,'multimer': multimer,
-                    'pdb_file': pdb_file, 'reduced_msa_file': new_msa, 
-                    'full_msa_file': new_msa_full, 'msa_weights': msa_weights,
-                    'tranception_dms': os.path.join(internal_path,
-                    'DMS_Tranception', f'{struct}_{chain}_{dataset}.csv'),  
-                    'mismatch': mismatch, 'origin': origin 
-                }}).T          
-                
-                # ultimately turns into the output table used downstream
-                hit = pd.concat([hit, new_hit])
+            if args.doubles:
+                wt1 = wt
+                pos1 = pos
+                mut1 = mut
+                for (wt2, pos2, mut2, aa_seq), group3 in group2.groupby(
+                    ['wild_type_2', 'position_2', 'mutation_2', 'aa_seq']
+                ):
+                    pos2 -= inferred_offset
+                    # get offsets for interconversion between uniprot and pdb positions
+                    if code != '2MWA':
+                        offset_up2, seq_pos2, mismatch = utils.get_offsets(
+                            wt2, pos2, dataset, alignment_df)                      
+                    else:
+                        offset_up2, seq_pos2, mismatch = 0, 1, False  
 
-            # there are exceptions in FireProt where the PDB sequence 
-            # doesn't match UniProt at mutated positions
-            # e.g. due to mutant structures
-            except Exception as e:
-                print(e, code, wt, pos, mut)
-                miss = pd.concat([miss, pd.DataFrame({'0': {
-                    'code':code, 'struct':struct,
-                    'wt': wt, 'pos': pos, 'mut': mut, 'ou': offset_up  
-                }}).T])
+                    if type(offset_up) == int and type(offset_up2) == int:
+                        try:
+                            assert offset_up2 == offset_up, code
+                        except:
+                            pass
+                    else:
+                        continue
+
+                    # second validation that mutants are correct
+                    if not np.isnan(offset_up):
+                        if uniprot_seq[seq_pos2 -1 - offset_up] != wt2:
+                            p = seq_pos2 -1 - offset_up
+                            print('UniProt mismatch detected.')
+                        #if dataset != 'fireprot':
+                        #    assert pu[seq_pos -1] == wt
+                        try:
+                            if pu[seq_pos2 - 1] != wt2:
+                                print('Warning! PDB at mutation does not match wt2')
+                        except IndexError:
+                            print(code, seq_pos2 -1 - inferred_offset, 'out of range')
+
+                        # format the mutant sequence as required by each method
+                        pu = utils.generate_mutant_sequences(
+                            struct, chain, seq_pos, mut, pu, SEQUENCES_DIR
+                            )
+                    else:
+                        pu = ''
+
+                    if not np.isnan(offset_up):
+                        mapper = mapping_df.loc[
+                            mapping_df['sequential_id']==seq_pos2].reset_index()
+                        assert len(mapper) == 1
+                        mapper = mapper.loc[0, :]
+                        #assert mapper['repaired_seq'] == wt
+                        pos_pdb2 = mapper['author_id']
+                    else:
+                        pos_pdb2 = np.nan
+
+                    new_hit = pd.DataFrame({0: {
+                        'uid': code + '_' + str(pos1) + mut1 + str(pos2) + mut2,
+                        'code':code, 'structure':struct, 'chain':chain, 
+                        'wild_type_1':wt1, 'position_1':seq_pos, 'mutation_1':mut1,
+                        'wild_type_2':wt2, 'position_2':seq_pos2, 'mutation_2':mut2,
+                        'uniprot_seq': uniprot_seq,
+                        'position_1_pdb': pos_pdb, 'position_2_pdb': pos_pdb2,
+                        'position_1_aa_seq': pos1, 'position_2_aa_seq': pos2,
+                        'pdb_ungapped': pu, 'uniprot_accession': accession,
+                        'offset_up':offset_up, 'window_start': window_start, 
+                        'is_nmr':is_nmr,'multimer': multimer,
+                        'pdb_file': pdb_file, 'reduced_msa_file': new_msa, 
+                        'full_msa_file': new_msa_full, 
+                        'msa_weights': msa_weights,
+                        'tranception_dms': os.path.join(internal_path,
+                        'DMS_Tranception', f'{struct}_{chain}_{dataset}.csv'),  
+                        'mismatch': mismatch, 'origin': origin    
+                    }}).T               
+                    # ultimately turns into the output table used downstream
+                    hit = pd.concat([hit, new_hit])
+
+            else:
+
+                try:
+                    new_hit = pd.DataFrame({0: {
+                        'uid': (code + '_' + str(pos) + mut
+                            if uid is None else uid),
+                        'code':code, 'structure':struct, 'chain':chain, 
+                        'wild_type':wt, 'position_aa_seq':pos, 'position':seq_pos,
+                        'mutation':mut, 'offset_up':offset_up, 'pdb_ungapped': pu,
+                        'position_pdb': pos_pdb, 'uniprot_accession': accession,
+                        'uniprot_seq': uniprot_seq,
+                        'window_start': window_start, 
+                        'is_nmr':is_nmr,'multimer': multimer,
+                        'pdb_file': pdb_file, 'reduced_msa_file': new_msa, 
+                        'full_msa_file': new_msa_full, 'msa_weights': msa_weights,
+                        'tranception_dms': os.path.join(internal_path,
+                        'DMS_Tranception', f'{struct}_{chain}_{dataset}.csv'),  
+                        'mismatch': mismatch, 'origin': origin 
+                    }}).T          
+                    
+                    # ultimately turns into the output table used downstream
+                    hit = pd.concat([hit, new_hit])
+
+                # there are exceptions in FireProt where the PDB sequence 
+                # doesn't match UniProt at mutated positions
+                # e.g. due to mutant structures
+                except Exception as e:
+                    print(e, code, wt, pos, mut)
+                    miss = pd.concat([miss, pd.DataFrame({'0': {
+                        'code':code, 'struct':struct,
+                        'wt': wt, 'pos': pos, 'mut': mut, 'ou': offset_up  
+                    }}).T])
 
     if args.verbose:
         hit.to_csv(
@@ -476,10 +589,17 @@ def main(args):
             os.path.join(output_path, DATA_DIR, f'miss_{dataset}.csv')
             )
 
-    db = db.drop(
-        ['code', 'chain', 'wild_type', 'position', 'mutation']\
-            + (['structure'] if sym else []), axis=1
-        )
+    if args.doubles:
+        db = db.drop(
+            ['code', 'chain', 'wild_type_1', 'position_1', 'mutation_1',
+             'wild_type_2', 'position_2', 'mutation_2']\
+                + (['structure'] if sym else []), axis=1
+            )
+    else:
+        db = db.drop(
+            ['code', 'chain', 'wild_type', 'position', 'mutation']\
+                + (['structure'] if sym else []), axis=1
+            )
 
     print(hit)
     # combine all the original mutation information from the source with hits
@@ -499,10 +619,15 @@ def main(args):
 
     # iterate back through the output dataframe based on wt structure
     for (code, struct, chain), group in out.groupby(grouper):
+        
         # save the data in a method specific directory in the output_root 
         # e.g. DMS_MSA for MSA transformer
-        utils.save_formatted_data(
-            struct, chain, group, dataset, output_path)
+        if not args.doubles:
+            utils.save_formatted_data(
+                struct, chain, group, dataset, output_path)
+        else:
+              utils.save_formatted_data(
+                struct, chain, group, dataset, output_path, doubles=True)          
 
     # change which structure gets used if it is Ssym
     if sym:
@@ -511,66 +636,84 @@ def main(args):
         
     out = out.set_index('uid')
 
-    # put certain columns first for postprocessing
-    aligned_cols = ['code', 'chain', 'wild_type', 'position', 'mutation', 
-        'offset_up', 'uniprot_seq', 'reduced_msa_file', 'full_msa_file']
-    remaining_cols = list(out.columns.drop(aligned_cols))
-    out = out[aligned_cols + remaining_cols]
-    out = out.sort_values(['code', 'chain', 'position', 'mutation'])
-
     # this is the main input file for all PSLMs
     outloc = os.path.join(
         output_path, DATA_DIR, f'{dataset_outname}_mapped.csv')
 
-    # ensure the origin column is last for convenience
-    cols = list(out.columns)
-    cols.remove('origin')
-    cols.append('origin')
-    out = out.loc[:, cols]
-    out.to_csv(outloc)
-    print(f'Saved mapped database to {outloc}')
+    if args.doubles:
+        # put certain columns first for postprocessing
+        aligned_cols = ['code', 'chain', 'wild_type_1', 'position_1_aa_seq', 'mutation_1', 
+            'wild_type_2', 'position_2_aa_seq', 'mutation_2', 
+            'offset_up', 'uniprot_seq', 'reduced_msa_file', 'full_msa_file']
+        remaining_cols = list(out.columns.drop(aligned_cols))
+        out = out[aligned_cols + remaining_cols]
+        out = out.sort_values(['code', 'chain', 'position_1', 'mutation_1', 'position_2', 'mutation_2'])
 
-    if dataset_outname == 's669':
+        # ensure the origin column is last for convenience
+        cols = list(out.columns)
+        cols.remove('origin')
+        cols.append('origin')
+        out = out.loc[:, cols]
+        out.to_csv(outloc)
+        print(f'Saved mapped database to {outloc}')
 
-        db = out
-        db['uid2'] = db['code'] + '_' + \
-            db['position'].astype(int).astype(str) + db['mutation'].str[-1]
-        db = db.reset_index().set_index(['uid', 'uid2'])
-
-        # create and use a third index for matching with the S461 subset
-        db_full = db.copy(deep=True)
-        db_full['uid3'] = db['code'] + '_' + db['PDB_Mut'].str[1:]
-        db_full = db_full.reset_index().set_index('uid3')
-
-        # preprocess S461 to align with S669
-        s461 = pd.read_csv(os.path.join
-            (output_path, 'data', 'external_datasets','S461.csv'))
-        s461['uid3'] = s461['PDB'] + '_' + s461['MUT_D'].str[2:]
-        s461 = s461.set_index('uid3')
-        s461['ddG_I'] = -s461['ddG_D']
-        s461.columns = [s+'_dir' for s in s461.columns]
-        s461 = s461.rename(
-            {'ddG_D_dir': 'ddG_dir', 'ddG_I_dir': 'ddG_inv'}, axis=1)
-
-        # merge S669 with S461 
-        # (keeping predictions from both for comparison purposes)
-        db = s461.join(db_full, how='left').reset_index(
-            drop=True).set_index(['uid', 'uid2'])
-
-        db.to_csv(os.path.join(output_path, DATA_DIR, 's461_mapped.csv'))
-
-    if dataset_outname == 'k3822':
-
-        db = out
-        db_reduced = pd.read_csv(os.path.join
-            (output_path, 'data', 'external_datasets','K2369.csv')
-            ).set_index('uid')
-        print(db.head())
-        print(db_reduced.head())
-        db = db.loc[db_reduced.index]
-        db.to_csv(os.path.join(output_path, DATA_DIR, 'k2369_mapped.csv'))
+    else:
+        # put certain columns first for postprocessing
+        aligned_cols = ['code', 'chain', 'wild_type', 'position', 'mutation', 
+            'offset_up', 'uniprot_seq', 'reduced_msa_file', 'full_msa_file']
         
+        remaining_cols = list(out.columns.drop(aligned_cols))
+        out = out[aligned_cols + remaining_cols]
+        out = out.sort_values(['code', 'chain', 'position', 'mutation'])
 
+        # ensure the origin column is last for convenience
+        cols = list(out.columns)
+        cols.remove('origin')
+        cols.append('origin')
+        out = out.loc[:, cols]
+        out.to_csv(outloc)
+        print(f'Saved mapped database to {outloc}')
+
+        if dataset_outname == 's669':
+
+            db = out
+            db['uid2'] = db['code'] + '_' + \
+                db['position'].astype(int).astype(str) + db['mutation'].str[-1]
+            db = db.reset_index().set_index(['uid', 'uid2'])
+
+            # create and use a third index for matching with the S461 subset
+            db_full = db.copy(deep=True)
+            db_full['uid3'] = db['code'] + '_' + db['PDB_Mut'].str[1:]
+            db_full = db_full.reset_index().set_index('uid3')
+
+            # preprocess S461 to align with S669
+            s461 = pd.read_csv(os.path.join
+                (output_path, 'data', 'external_datasets','S461.csv'))
+            s461['uid3'] = s461['PDB'] + '_' + s461['MUT_D'].str[2:]
+            s461 = s461.set_index('uid3')
+            s461['ddG_I'] = -s461['ddG_D']
+            s461.columns = [s+'_dir' for s in s461.columns]
+            s461 = s461.rename(
+                {'ddG_D_dir': 'ddG_dir', 'ddG_I_dir': 'ddG_inv'}, axis=1)
+
+            # merge S669 with S461 
+            # (keeping predictions from both for comparison purposes)
+            db = s461.join(db_full, how='left').reset_index(
+                drop=True).set_index(['uid', 'uid2'])
+
+            db.to_csv(os.path.join(output_path, DATA_DIR, 's461_mapped.csv'))
+
+        if dataset_outname == 'k3822':
+
+            db = out
+            db_reduced = pd.read_csv(os.path.join
+                (output_path, 'data', 'external_datasets','K2369.csv')
+                ).set_index('uid')
+            print(db.head())
+            print(db_reduced.head())
+            db = db.loc[db_reduced.index]
+            db.to_csv(os.path.join(output_path, DATA_DIR, 'k2369_mapped.csv'))
+            
     grouped = out.reset_index(drop=True).reset_index()
     extended_indices = grouped.loc[
         grouped['code'].isin(extended_msas)].groupby(
@@ -641,6 +784,8 @@ if __name__=='__main__':
                         +'than obtaining one automatically')
     parser.add_argument('--use_target_seq', help='specify the sequence to be ' 
                         +'used by Tranception')
+    parser.add_argument('--infer_offsets', action='store_true')
+    parser.add_argument('--doubles', action='store_true')
 
     args = parser.parse_args()
     if args.dataset.lower() in ['q3421']:
