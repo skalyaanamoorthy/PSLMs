@@ -27,7 +27,7 @@ multiprocess
 networkx==2.6
 numba
 numpy==1.23
-optax
+optax<=0.1.7
 packaging
 pandas
 psutil
