@@ -17,6 +17,7 @@ fsspec
 git+https://github.com/facebookresearch/esm.git@2b369911bb5b4b0dda914521b9475cad1656b2ac
 huggingface-hub
 idna
+importlib_metadata
 jax==0.3.0
 joblib
 llvmlite
