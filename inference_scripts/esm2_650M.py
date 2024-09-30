@@ -62,9 +62,12 @@ def score_sequences(args):
 
                         batch_tokens_masked = batch_tokens.clone()
                         batch_tokens_masked[0, idx + 1] = alphabet.mask_idx
+                        if torch.cuda.is_available():
+                            batch_tokens_masked = batch_tokens_masked.cuda()
+                            
                         with torch.no_grad():
                             token_probs = torch.log_softmax(
-                                model(batch_tokens_masked.cuda())["logits"], dim=-1
+                                model(batch_tokens_masked)["logits"], dim=-1
                             )
                         #print(token_probs.shape)
                         try:
